@@ -1,0 +1,28 @@
+# Python and package builds
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Virtual environments and tooling
+.venv/
+.venv-*/
+venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# External validation inputs; fetch them locally, never commit them.
+tests/vectors/
+tests/programs/
+validation/data/
+validation/mame/
+reference/
+*.trace
+error.log
+
+# MAME working directories used by docs/mame-oracle.md
+mame-work/
+mame-home/
