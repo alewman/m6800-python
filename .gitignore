@@ -26,3 +26,6 @@ error.log
 # MAME working directories used by docs/mame-oracle.md
 mame-work/
 mame-home/
+
+# Independent emulators cloned for cross-checking (docs/validation.md, rung 5).
+third_party/
