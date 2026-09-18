@@ -128,199 +128,221 @@ bugs when porting from a 6502 or 6809 habit. `LDAA $FF,X` reads `IX+255`.
 **107** mnemonic forms over **197** opcodes on the MC6800. The MC6801/6803 add
 **11** more forms over **23** more opcodes, for 118 forms over 220 opcodes.
 
-Those two totals are not quoted from anywhere — they fall out of MAME's tables
-once its inventions are removed, which is itself a check that the inventions
-have all been found. MAME treats **203** opcodes as legal on the 6800; remove
-the six it should not (`$21`, `$87`, `$8F`, `$9D`, `$C7`, `$CF`) and exactly
-**197** remain, Motorola's documented count. MAME treats **225** as legal on
-the 6801/6803; remove the five it should not (`$87`, `$8F`, `$C7`, `$CD`,
-`$CF`) and **220** remain.
+Both totals are counted off the manuals' Appendix A pages, one opcode per row
+(`scripts/extract_manual_tables.py`), and they agree with MAME once its
+inventions are removed, which is a check that the inventions have all been
+found. MAME treats **203** opcodes as legal on the 6800; remove the six
+M68PRM does not document (`$21`, `$87`, `$8F`, `$9D`, `$C7`, `$CF`) and the
+remaining **197** are exactly M68PRM's. MAME treats **225** as legal on the
+6801/6803; remove the five M6801RM does not document (`$87`, `$8F`, `$C7`,
+`$CD`, `$CF`) and the remaining **220** are exactly M6801RM's.
 
 **How to read the table.** Each cell is `` `opcode` bytes/cycles ``. Where the
-6800 and the 6801/6803 differ, both appear as `6800 · 6801`. A cell marked
-**†** exists only on the 6801/6803. A cell marked **‡** is an opcode Motorola
-does **not** assign on the part in question — `$21` (`BRN`) and `$9D`
-(`JSR` direct) are real 6801 instructions that MAME wrongly allows on the
-6800; the store-immediate slots are assigned on neither. MAME executes them
-all anyway; [undocumented-behavior.md](undocumented-behavior.md) says what it
-does and what is known about the real part.
+6800 and the 6801/6803 differ, both appear as `6800 · 6801`. An opcode marked
+**†** exists only on the 6801/6803. An opcode marked **‡** is one Motorola
+does **not** assign on the part in question: `$21` (`BRN`) and `$9D` (`JSR`
+direct) are real 6801 instructions that MAME also executes on the 6800 (hence
+**†‡**), and the store-immediate slots are assigned on neither part. MAME
+executes them all anyway; [undocumented-behavior.md](undocumented-behavior.md)
+says what it does and what is known about the real part. **The cycle count in
+a ‡ cell is MAME's, not Motorola's**, and `$CD`'s 4 is MAME's `XX` sentinel
+for "unknown".
 
-Flags use Motorola's Appendix A notation over **H N Z V C** (the I bit is not
-in this column): `*` affected, `-` unaffected, `0` cleared, `1` set, `?`
-undefined, `#` set directly from the operand (`TAP`), `@` a special rule given
-in the text (`MUL`: C ← bit 7 of the low result byte).
+Flags use Motorola's notation over **H N Z V C** (the I bit is not in this
+column): `*` set or cleared by a rule, `-` not affected, `0` cleared, `1` set,
+`?` "not defined" in the manual, `#` loaded from the operand (`TAP`) or the
+stack (`RTI`). Where the two parts differ the cell reads `6800 · 6801`, which
+happens for `CPX` alone. The rule behind each `*` is the one printed on the
+instruction's Appendix A page; the ones a core is likeliest to get wrong are
+spelled out below the table.
 
-Opcodes, byte counts and cycle counts below were extracted mechanically from
-MAME's `cycles_6800[]` (`m6800.cpp:251-271`), `cycles_6803[]`
-(`m6801.cpp:136-156`), `m6800_insn[]`, `m6803_insn[]` and the shared
-disassembler table `6800dasm.cpp:43`; the flag column from the per-handler
-comments in `6800ops.hxx`. **They agree with M68PRM Appendix A and M6801RM
-Appendix A where the build session has checked them, and the manuals are the
-judge if they ever disagree.** Re-derive the table with
-`scripts/dump_mame_tables.py` after any MAME upgrade.
+**Source.** Every byte count, cycle count and flag rule for a documented opcode
+below comes from the Motorola manuals: M68PRM Appendix A (pp. A-3 to A-76) for
+the MC6800 and M6801RM Appendix A (pp. A-3 to A-90) for the MC6801/6803, read
+by `scripts/extract_manual_tables.py`, which regenerates this table with
+`--markdown` and cross-checks it against MAME with `--report`. On 2026-09-18
+it found **197** documented opcodes in M68PRM and **220** in M6801RM, and
+MAME 0.285's cycle tables agree with the manuals on **every one**. MAME's
+handler *comments*, from which this table's flag column was first generated,
+do not: they were wrong on 52 opcodes, all corrected here from the manuals
+(MAME's code is right on those; see `scripts/dump_mame_tables.py`).
 
 | Mnemonic | Operation | IMM | DIR | IDX | EXT | INH / REL | HNZVC |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | **ABA** | A ← A + B |  |  |  |  | `1B` 1/2 | `*****` |
-| **ABX** | X ← X + B (B unsigned) |  |  |  |  | `3A` 1/3† | `-----` |
-| **ADCA** | A ← A + M + C | `89` 2/2 | `99` 2/3 | `A9` 2/5 · 4 | `B9` 3/4 |  | `*****` |
-| **ADCB** | B ← B + M + C | `C9` 2/2 | `D9` 2/3 | `E9` 2/5 · 4 | `F9` 3/4 |  | `*****` |
-| **ADDA** | A ← A + M | `8B` 2/2 | `9B` 2/3 | `AB` 2/5 · 4 | `BB` 3/4 |  | `*****` |
-| **ADDB** | B ← B + M | `CB` 2/2 | `DB` 2/3 | `EB` 2/5 · 4 | `FB` 3/4 |  | `*****` |
-| **ADDD** | D ← D + M:M+1 | `C3` 3/4† | `D3` 2/5† | `E3` 2/6† | `F3` 3/6† |  | `-****` |
-| **ANDA** | A ← A ∧ M | `84` 2/2 | `94` 2/3 | `A4` 2/5 · 4 | `B4` 3/4 |  | `-**0-` |
-| **ANDB** | B ← B ∧ M | `C4` 2/2 | `D4` 2/3 | `E4` 2/5 · 4 | `F4` 3/4 |  | `-**0-` |
-| **ASL** | M ← M << 1, C ← b7 |  |  | `68` 2/7 · 6 | `78` 3/6 |  | `?****` |
-| **ASLA** | A ← A << 1, C ← b7 |  |  |  |  | `48` 1/2 | `?****` |
-| **ASLB** | B ← B << 1, C ← b7 |  |  |  |  | `58` 1/2 | `?****` |
-| **ASLD** | D ← D << 1, C ← b15 |  |  |  |  | `05` 1/3† | `?****` |
-| **ASR** | M ← M >> 1 arithmetic |  |  | `67` 2/7 · 6 | `77` 3/6 |  | `?**-*` |
-| **ASRA** | A ← A >> 1 arithmetic |  |  |  |  | `47` 1/2 | `?**-*` |
-| **ASRB** | B ← B >> 1 arithmetic |  |  |  |  | `57` 1/2 | `?**-*` |
-| **BCC** | branch if C=0 |  |  |  |  | `24` 2/4 · 3 | `-----` |
-| **BCS** | branch if C=1 |  |  |  |  | `25` 2/4 · 3 | `-----` |
-| **BEQ** | branch if Z=1 |  |  |  |  | `27` 2/4 · 3 | `-----` |
-| **BGE** | branch if N⊕V=0 |  |  |  |  | `2C` 2/4 · 3 | `-----` |
-| **BGT** | branch if Z∨(N⊕V)=0 |  |  |  |  | `2E` 2/4 · 3 | `-----` |
-| **BHI** | branch if C∨Z=0 |  |  |  |  | `22` 2/4 · 3 | `-----` |
-| **BITA** | A ∧ M, flags only | `85` 2/2 | `95` 2/3 | `A5` 2/5 · 4 | `B5` 3/4 |  | `-**0-` |
-| **BITB** | B ∧ M, flags only | `C5` 2/2 | `D5` 2/3 | `E5` 2/5 · 4 | `F5` 3/4 |  | `-**0-` |
-| **BLE** | branch if Z∨(N⊕V)=1 |  |  |  |  | `2F` 2/4 · 3 | `-----` |
-| **BLS** | branch if C∨Z=1 |  |  |  |  | `23` 2/4 · 3 | `-----` |
-| **BLT** | branch if N⊕V=1 |  |  |  |  | `2D` 2/4 · 3 | `-----` |
-| **BMI** | branch if N=1 |  |  |  |  | `2B` 2/4 · 3 | `-----` |
-| **BNE** | branch if Z=0 |  |  |  |  | `26` 2/4 · 3 | `-----` |
-| **BPL** | branch if N=0 |  |  |  |  | `2A` 2/4 · 3 | `-----` |
-| **BRA** | branch always |  |  |  |  | `20` 2/4 · 3 | `-----` |
-| **BRN** | branch never (2-byte NOP) |  |  |  |  | `21`‡ 2/4 · 3 | `-----` |
-| **BSR** | push PC, branch to subroutine |  |  |  |  | `8D` 2/8 · 6 | `-----` |
-| **BVC** | branch if V=0 |  |  |  |  | `28` 2/4 · 3 | `-----` |
-| **BVS** | branch if V=1 |  |  |  |  | `29` 2/4 · 3 | `-----` |
+| **ABX** | X ← X + B (B unsigned) |  |  |  |  | `3A`† 1/3 | `-----` |
+| **ADCA** | A ← A + M + C | `89` 2/2 | `99` 2/3 | `A9` 2/5 · 4 | `B9` 3/4 |  | `*****` |
+| **ADCB** | B ← B + M + C | `C9` 2/2 | `D9` 2/3 | `E9` 2/5 · 4 | `F9` 3/4 |  | `*****` |
+| **ADDA** | A ← A + M | `8B` 2/2 | `9B` 2/3 | `AB` 2/5 · 4 | `BB` 3/4 |  | `*****` |
+| **ADDB** | B ← B + M | `CB` 2/2 | `DB` 2/3 | `EB` 2/5 · 4 | `FB` 3/4 |  | `*****` |
+| **ADDD** | D ← D + M:M+1 | `C3`† 3/4 | `D3`† 2/5 | `E3`† 2/6 | `F3`† 3/6 |  | `-****` |
+| **ANDA** | A ← A ∧ M | `84` 2/2 | `94` 2/3 | `A4` 2/5 · 4 | `B4` 3/4 |  | `-**0-` |
+| **ANDB** | B ← B ∧ M | `C4` 2/2 | `D4` 2/3 | `E4` 2/5 · 4 | `F4` 3/4 |  | `-**0-` |
+| **ASL** | M ← M << 1, C ← b7 |  |  | `68` 2/7 · 6 | `78` 3/6 |  | `-****` |
+| **ASLA** | A ← A << 1, C ← b7 |  |  |  |  | `48` 1/2 | `-****` |
+| **ASLB** | B ← B << 1, C ← b7 |  |  |  |  | `58` 1/2 | `-****` |
+| **ASLD** | D ← D << 1, C ← b15 |  |  |  |  | `05`† 1/3 | `-****` |
+| **ASR** | M ← M >> 1 arithmetic |  |  | `67` 2/7 · 6 | `77` 3/6 |  | `-****` |
+| **ASRA** | A ← A >> 1 arithmetic |  |  |  |  | `47` 1/2 | `-****` |
+| **ASRB** | B ← B >> 1 arithmetic |  |  |  |  | `57` 1/2 | `-****` |
+| **BCC** | branch if C=0 |  |  |  |  | `24` 2/4 · 3 | `-----` |
+| **BCS** | branch if C=1 |  |  |  |  | `25` 2/4 · 3 | `-----` |
+| **BEQ** | branch if Z=1 |  |  |  |  | `27` 2/4 · 3 | `-----` |
+| **BGE** | branch if N⊕V=0 |  |  |  |  | `2C` 2/4 · 3 | `-----` |
+| **BGT** | branch if Z∨(N⊕V)=0 |  |  |  |  | `2E` 2/4 · 3 | `-----` |
+| **BHI** | branch if C∨Z=0 |  |  |  |  | `22` 2/4 · 3 | `-----` |
+| **BITA** | A ∧ M, flags only | `85` 2/2 | `95` 2/3 | `A5` 2/5 · 4 | `B5` 3/4 |  | `-**0-` |
+| **BITB** | B ∧ M, flags only | `C5` 2/2 | `D5` 2/3 | `E5` 2/5 · 4 | `F5` 3/4 |  | `-**0-` |
+| **BLE** | branch if Z∨(N⊕V)=1 |  |  |  |  | `2F` 2/4 · 3 | `-----` |
+| **BLS** | branch if C∨Z=1 |  |  |  |  | `23` 2/4 · 3 | `-----` |
+| **BLT** | branch if N⊕V=1 |  |  |  |  | `2D` 2/4 · 3 | `-----` |
+| **BMI** | branch if N=1 |  |  |  |  | `2B` 2/4 · 3 | `-----` |
+| **BNE** | branch if Z=0 |  |  |  |  | `26` 2/4 · 3 | `-----` |
+| **BPL** | branch if N=0 |  |  |  |  | `2A` 2/4 · 3 | `-----` |
+| **BRA** | branch always |  |  |  |  | `20` 2/4 · 3 | `-----` |
+| **BRN** | branch never (2-byte NOP) |  |  |  |  | `21`†‡ 2/3 | `-----` |
+| **BSR** | push PC, branch to subroutine |  |  |  |  | `8D` 2/8 · 6 | `-----` |
+| **BVC** | branch if V=0 |  |  |  |  | `28` 2/4 · 3 | `-----` |
+| **BVS** | branch if V=1 |  |  |  |  | `29` 2/4 · 3 | `-----` |
 | **CBA** | A − B, flags only |  |  |  |  | `11` 1/2 | `-****` |
 | **CLC** | C ← 0 |  |  |  |  | `0C` 1/2 | `----0` |
 | **CLI** | I ← 0 |  |  |  |  | `0E` 1/2 | `-----` |
-| **CLR** | M ← 0 |  |  | `6F` 2/7 · 6 | `7F` 3/6 |  | `-0100` |
+| **CLR** | M ← 0 |  |  | `6F` 2/7 · 6 | `7F` 3/6 |  | `-0100` |
 | **CLRA** | A ← 0 |  |  |  |  | `4F` 1/2 | `-0100` |
 | **CLRB** | B ← 0 |  |  |  |  | `5F` 1/2 | `-0100` |
 | **CLV** | V ← 0 |  |  |  |  | `0A` 1/2 | `---0-` |
-| **CMPA** | A − M, flags only | `81` 2/2 | `91` 2/3 | `A1` 2/5 · 4 | `B1` 3/4 |  | `?****` |
-| **CMPB** | B − M, flags only | `C1` 2/2 | `D1` 2/3 | `E1` 2/5 · 4 | `F1` 3/4 |  | `?****` |
-| **COM** | M ← ¬M |  |  | `63` 2/7 · 6 | `73` 3/6 |  | `-**01` |
+| **CMPA** | A − M, flags only | `81` 2/2 | `91` 2/3 | `A1` 2/5 · 4 | `B1` 3/4 |  | `-****` |
+| **CMPB** | B − M, flags only | `C1` 2/2 | `D1` 2/3 | `E1` 2/5 · 4 | `F1` 3/4 |  | `-****` |
+| **COM** | M ← ¬M |  |  | `63` 2/7 · 6 | `73` 3/6 |  | `-**01` |
 | **COMA** | A ← ¬A |  |  |  |  | `43` 1/2 | `-**01` |
 | **COMB** | B ← ¬B |  |  |  |  | `53` 1/2 | `-**01` |
-| **CPX** | X − M:M+1, flags only | `8C` 3/3 · 4 | `9C` 2/4 · 5 | `AC` 2/6 | `BC` 3/5 · 6 |  | `-***-` |
-| **DAA** | decimal adjust A after ADD/ADC/ABA |  |  |  |  | `19` 1/2 | `-**0*` |
-| **DEC** | M ← M − 1 |  |  | `6A` 2/7 · 6 | `7A` 3/6 |  | `-***-` |
+| **CPX** | X − M:M+1, flags only | `8C` 3/3 · 4 | `9C` 2/4 · 5 | `AC` 2/6 | `BC` 3/5 · 6 |  | `-***-` · `-****` |
+| **DAA** | decimal adjust A after ADD/ADC/ABA |  |  |  |  | `19` 1/2 | `-**?*` |
+| **DEC** | M ← M − 1 |  |  | `6A` 2/7 · 6 | `7A` 3/6 |  | `-***-` |
 | **DECA** | A ← A − 1 |  |  |  |  | `4A` 1/2 | `-***-` |
 | **DECB** | B ← B − 1 |  |  |  |  | `5A` 1/2 | `-***-` |
-| **DES** | SP ← SP − 1 |  |  |  |  | `34` 1/4 · 3 | `-----` |
-| **DEX** | X ← X − 1 |  |  |  |  | `09` 1/4 · 3 | `--*--` |
-| **EORA** | A ← A ⊻ M | `88` 2/2 | `98` 2/3 | `A8` 2/5 · 4 | `B8` 3/4 |  | `-**0-` |
-| **EORB** | B ← B ⊻ M | `C8` 2/2 | `D8` 2/3 | `E8` 2/5 · 4 | `F8` 3/4 |  | `-**0-` |
-| **INC** | M ← M + 1 |  |  | `6C` 2/7 · 6 | `7C` 3/6 |  | `-***-` |
+| **DES** | SP ← SP − 1 |  |  |  |  | `34` 1/4 · 3 | `-----` |
+| **DEX** | X ← X − 1 |  |  |  |  | `09` 1/4 · 3 | `--*--` |
+| **EORA** | A ← A ⊻ M | `88` 2/2 | `98` 2/3 | `A8` 2/5 · 4 | `B8` 3/4 |  | `-**0-` |
+| **EORB** | B ← B ⊻ M | `C8` 2/2 | `D8` 2/3 | `E8` 2/5 · 4 | `F8` 3/4 |  | `-**0-` |
+| **INC** | M ← M + 1 |  |  | `6C` 2/7 · 6 | `7C` 3/6 |  | `-***-` |
 | **INCA** | A ← A + 1 |  |  |  |  | `4C` 1/2 | `-***-` |
 | **INCB** | B ← B + 1 |  |  |  |  | `5C` 1/2 | `-***-` |
-| **INS** | SP ← SP + 1 |  |  |  |  | `31` 1/4 · 3 | `-----` |
-| **INX** | X ← X + 1 |  |  |  |  | `08` 1/4 · 3 | `--*--` |
-| **JMP** | PC ← EA |  |  | `6E` 2/4 · 3 | `7E` 3/3 |  | `-----` |
-| **JSR** | push PC, PC ← EA |  | `9D`‡ 2/6 · 5 | `AD` 2/8 · 6 | `BD` 3/9 · 6 |  | `-----` |
-| **LDAA** | A ← M | `86` 2/2 | `96` 2/3 | `A6` 2/5 · 4 | `B6` 3/4 |  | `-**0-` |
-| **LDAB** | B ← M | `C6` 2/2 | `D6` 2/3 | `E6` 2/5 · 4 | `F6` 3/4 |  | `-**0-` |
-| **LDD** | D ← M:M+1 | `CC` 3/3† | `DC` 2/4† | `EC` 2/5† | `FC` 3/5† |  | `-**0-` |
-| **LDS** | SP ← M:M+1 | `8E` 3/3 | `9E` 2/4 | `AE` 2/6 · 5 | `BE` 3/5 |  | `-**0-` |
-| **LDX** | X ← M:M+1 | `CE` 3/3 | `DE` 2/4 | `EE` 2/6 · 5 | `FE` 3/5 |  | `-**0-` |
-| **LSR** | M ← M >> 1 logical |  |  | `64` 2/7 · 6 | `74` 3/6 |  | `-0*-*` |
-| **LSRA** | A ← A >> 1 logical |  |  |  |  | `44` 1/2 | `-0*-*` |
-| **LSRB** | B ← B >> 1 logical |  |  |  |  | `54` 1/2 | `-0*-*` |
-| **LSRD** | D ← D >> 1 logical |  |  |  |  | `04` 1/3† | `-0*-*` |
-| **MUL** | D ← A × B (unsigned) |  |  |  |  | `3D` 1/10† | `--*-@` |
-| **NEG** | M ← 0 − M |  |  | `60` 2/7 · 6 | `70` 3/6 |  | `?****` |
-| **NEGA** | A ← 0 − A |  |  |  |  | `40` 1/2 | `?****` |
-| **NEGB** | B ← 0 − B |  |  |  |  | `50` 1/2 | `?****` |
+| **INS** | SP ← SP + 1 |  |  |  |  | `31` 1/4 · 3 | `-----` |
+| **INX** | X ← X + 1 |  |  |  |  | `08` 1/4 · 3 | `--*--` |
+| **JMP** | PC ← EA |  |  | `6E` 2/4 · 3 | `7E` 3/3 |  | `-----` |
+| **JSR** | push PC, PC ← EA |  | `9D`†‡ 2/5 | `AD` 2/8 · 6 | `BD` 3/9 · 6 |  | `-----` |
+| **LDAA** | A ← M | `86` 2/2 | `96` 2/3 | `A6` 2/5 · 4 | `B6` 3/4 |  | `-**0-` |
+| **LDAB** | B ← M | `C6` 2/2 | `D6` 2/3 | `E6` 2/5 · 4 | `F6` 3/4 |  | `-**0-` |
+| **LDD** | D ← M:M+1 | `CC`† 3/3 | `DC`† 2/4 | `EC`† 2/5 | `FC`† 3/5 |  | `-**0-` |
+| **LDS** | SP ← M:M+1 | `8E` 3/3 | `9E` 2/4 | `AE` 2/6 · 5 | `BE` 3/5 |  | `-**0-` |
+| **LDX** | X ← M:M+1 | `CE` 3/3 | `DE` 2/4 | `EE` 2/6 · 5 | `FE` 3/5 |  | `-**0-` |
+| **LSR** | M ← M >> 1 logical |  |  | `64` 2/7 · 6 | `74` 3/6 |  | `-0***` |
+| **LSRA** | A ← A >> 1 logical |  |  |  |  | `44` 1/2 | `-0***` |
+| **LSRB** | B ← B >> 1 logical |  |  |  |  | `54` 1/2 | `-0***` |
+| **LSRD** | D ← D >> 1 logical |  |  |  |  | `04`† 1/3 | `-0***` |
+| **MUL** | D ← A × B (unsigned) |  |  |  |  | `3D`† 1/10 | `----*` |
+| **NEG** | M ← 0 − M |  |  | `60` 2/7 · 6 | `70` 3/6 |  | `-****` |
+| **NEGA** | A ← 0 − A |  |  |  |  | `40` 1/2 | `-****` |
+| **NEGB** | B ← 0 − B |  |  |  |  | `50` 1/2 | `-****` |
 | **NOP** | no operation |  |  |  |  | `01` 1/2 | `-----` |
-| **ORAA** | A ← A ∨ M | `8A` 2/2 | `9A` 2/3 | `AA` 2/5 · 4 | `BA` 3/4 |  | `-**0-` |
-| **ORAB** | B ← B ∨ M | `CA` 2/2 | `DA` 2/3 | `EA` 2/5 · 4 | `FA` 3/4 |  | `-**0-` |
-| **PSHA** | push A |  |  |  |  | `36` 1/4 · 3 | `-----` |
-| **PSHB** | push B |  |  |  |  | `37` 1/4 · 3 | `-----` |
-| **PSHX** | push X (low byte first) |  |  |  |  | `3C` 1/4† | `-----` |
+| **ORAA** | A ← A ∨ M | `8A` 2/2 | `9A` 2/3 | `AA` 2/5 · 4 | `BA` 3/4 |  | `-**0-` |
+| **ORAB** | B ← B ∨ M | `CA` 2/2 | `DA` 2/3 | `EA` 2/5 · 4 | `FA` 3/4 |  | `-**0-` |
+| **PSHA** | push A |  |  |  |  | `36` 1/4 · 3 | `-----` |
+| **PSHB** | push B |  |  |  |  | `37` 1/4 · 3 | `-----` |
+| **PSHX** | push X (low byte first) |  |  |  |  | `3C`† 1/4 | `-----` |
 | **PULA** | pull A |  |  |  |  | `32` 1/4 | `-----` |
 | **PULB** | pull B |  |  |  |  | `33` 1/4 | `-----` |
-| **PULX** | pull X |  |  |  |  | `38` 1/5† | `-----` |
-| **ROL** | M ← rotate left through C |  |  | `69` 2/7 · 6 | `79` 3/6 |  | `-****` |
+| **PULX** | pull X |  |  |  |  | `38`† 1/5 | `-----` |
+| **ROL** | M ← rotate left through C |  |  | `69` 2/7 · 6 | `79` 3/6 |  | `-****` |
 | **ROLA** | A ← rotate left through C |  |  |  |  | `49` 1/2 | `-****` |
 | **ROLB** | B ← rotate left through C |  |  |  |  | `59` 1/2 | `-****` |
-| **ROR** | M ← rotate right through C |  |  | `66` 2/7 · 6 | `76` 3/6 |  | `-**-*` |
-| **RORA** | A ← rotate right through C |  |  |  |  | `46` 1/2 | `-**-*` |
-| **RORB** | B ← rotate right through C |  |  |  |  | `56` 1/2 | `-**-*` |
+| **ROR** | M ← rotate right through C |  |  | `66` 2/7 · 6 | `76` 3/6 |  | `-****` |
+| **RORA** | A ← rotate right through C |  |  |  |  | `46` 1/2 | `-****` |
+| **RORB** | B ← rotate right through C |  |  |  |  | `56` 1/2 | `-****` |
 | **RTI** | pull CC,B,A,X,PC |  |  |  |  | `3B` 1/10 | `#####` |
 | **RTS** | pull PC |  |  |  |  | `39` 1/5 | `-----` |
 | **SBA** | A ← A − B |  |  |  |  | `10` 1/2 | `-****` |
-| **SBCA** | A ← A − M − C | `82` 2/2 | `92` 2/3 | `A2` 2/5 · 4 | `B2` 3/4 |  | `?****` |
-| **SBCB** | B ← B − M − C | `C2` 2/2 | `D2` 2/3 | `E2` 2/5 · 4 | `F2` 3/4 |  | `?****` |
+| **SBCA** | A ← A − M − C | `82` 2/2 | `92` 2/3 | `A2` 2/5 · 4 | `B2` 3/4 |  | `-****` |
+| **SBCB** | B ← B − M − C | `C2` 2/2 | `D2` 2/3 | `E2` 2/5 · 4 | `F2` 3/4 |  | `-****` |
 | **SEC** | C ← 1 |  |  |  |  | `0D` 1/2 | `----1` |
 | **SEI** | I ← 1 |  |  |  |  | `0F` 1/2 | `-----` |
 | **SEV** | V ← 1 |  |  |  |  | `0B` 1/2 | `---1-` |
-| **STAA** | M ← A | `87`‡ 2/3 · 2 | `97` 2/4 · 3 | `A7` 2/6 · 4 | `B7` 3/5 · 4 |  | `-**0-` |
-| **STAB** | M ← B | `C7`‡ 2/3 · 2 | `D7` 2/4 · 3 | `E7` 2/6 · 4 | `F7` 3/5 · 4 |  | `-**0-` |
-| **STD** | M:M+1 ← D | `CD`‡ 3/4† | `DD` 2/4† | `ED` 2/5† | `FD` 3/5† |  | `-**0-` |
-| **STS** | M:M+1 ← SP | `8F`‡ 3/4 · 3 | `9F` 2/5 · 4 | `AF` 2/7 · 5 | `BF` 3/6 · 5 |  | `-**0-` |
-| **STX** | M:M+1 ← X | `CF`‡ 3/4 · 3 | `DF` 2/5 · 4 | `EF` 2/7 · 5 | `FF` 3/6 · 5 |  | `-**0-` |
-| **SUBA** | A ← A − M | `80` 2/2 | `90` 2/3 | `A0` 2/5 · 4 | `B0` 3/4 |  | `?****` |
-| **SUBB** | B ← B − M | `C0` 2/2 | `D0` 2/3 | `E0` 2/5 · 4 | `F0` 3/4 |  | `?****` |
-| **SUBD** | D ← D − M:M+1 | `83` 3/4† | `93` 2/5† | `A3` 2/6† | `B3` 3/6† |  | `-****` |
+| **STAA** | M ← A | `87`‡ 2/3 · 2 | `97` 2/4 · 3 | `A7` 2/6 · 4 | `B7` 3/5 · 4 |  | `-**0-` |
+| **STAB** | M ← B | `C7`‡ 2/3 · 2 | `D7` 2/4 · 3 | `E7` 2/6 · 4 | `F7` 3/5 · 4 |  | `-**0-` |
+| **STD** | M:M+1 ← D | `CD`‡ 3/4 | `DD`† 2/4 | `ED`† 2/5 | `FD`† 3/5 |  | `-**0-` |
+| **STS** | M:M+1 ← SP | `8F`‡ 3/4 · 3 | `9F` 2/5 · 4 | `AF` 2/7 · 5 | `BF` 3/6 · 5 |  | `-**0-` |
+| **STX** | M:M+1 ← X | `CF`‡ 3/4 · 3 | `DF` 2/5 · 4 | `EF` 2/7 · 5 | `FF` 3/6 · 5 |  | `-**0-` |
+| **SUBA** | A ← A − M | `80` 2/2 | `90` 2/3 | `A0` 2/5 · 4 | `B0` 3/4 |  | `-****` |
+| **SUBB** | B ← B − M | `C0` 2/2 | `D0` 2/3 | `E0` 2/5 · 4 | `F0` 3/4 |  | `-****` |
+| **SUBD** | D ← D − M:M+1 | `83`† 3/4 | `93`† 2/5 | `A3`† 2/6 | `B3`† 3/6 |  | `-****` |
 | **SWI** | software interrupt, vector $FFFA |  |  |  |  | `3F` 1/12 | `-----` |
 | **TAB** | B ← A |  |  |  |  | `16` 1/2 | `-**0-` |
 | **TAP** | CC ← A |  |  |  |  | `06` 1/2 | `#####` |
 | **TBA** | A ← B |  |  |  |  | `17` 1/2 | `-**0-` |
 | **TPA** | A ← CC |  |  |  |  | `07` 1/2 | `-----` |
-| **TST** | M − 0, flags only |  |  | `6D` 2/7 · 6 | `7D` 3/6 |  | `-**0-` |
-| **TSTA** | A − 0, flags only |  |  |  |  | `4D` 1/2 | `-**0-` |
-| **TSTB** | B − 0, flags only |  |  |  |  | `5D` 1/2 | `-**0-` |
-| **TSX** | X ← SP + 1 |  |  |  |  | `30` 1/4 · 3 | `-----` |
-| **TXS** | SP ← X − 1 |  |  |  |  | `35` 1/4 · 3 | `-----` |
+| **TST** | M − 0, flags only |  |  | `6D` 2/7 · 6 | `7D` 3/6 |  | `-**00` |
+| **TSTA** | A − 0, flags only |  |  |  |  | `4D` 1/2 | `-**00` |
+| **TSTB** | B − 0, flags only |  |  |  |  | `5D` 1/2 | `-**00` |
+| **TSX** | X ← SP + 1 |  |  |  |  | `30` 1/4 · 3 | `-----` |
+| **TXS** | SP ← X − 1 |  |  |  |  | `35` 1/4 · 3 | `-----` |
 | **WAI** | stack state, wait for interrupt |  |  |  |  | `3E` 1/9 | `-----` |
 
 ### What the 6801/6803 add
 
 Ten mnemonics, all of them about the D accumulator or the index register
-(M6801RM §2, "New Instructions"):
+(M6801RM §1.1 and its Appendix A pages, cited per row), plus `BRN` and
+`JSR` direct as new opcodes for old mnemonics:
 
 | Mnemonic | Opcodes | Cycles | Operation | HNZVC |
 | --- | --- | --- | --- | --- |
-| `ABX` | `3A` | 3 | `X ← X + B`, B unsigned, no flags | `-----` |
-| `ADDD` | `C3` `D3` `E3` `F3` | 4/5/6/6 | `D ← D + M:M+1` | `-****` |
-| `ASLD` (= `LSLD`) | `05` | 3 | `D ← D << 1`, C ← bit 15 | `?****` |
-| `LDD` | `CC` `DC` `EC` `FC` | 3/4/5/5 | `D ← M:M+1` | `-**0-` |
-| `LSRD` | `04` | 3 | `D ← D >> 1`, C ← bit 0, N ← 0, V ← N⊕C | `-0**` |
-| `MUL` | `3D` | 10 | `D ← A × B`, unsigned 8×8→16; **C ← bit 7 of B**, i.e. of the low result byte, so that a following `ADCA #0` rounds | `--*-@` |
-| `PSHX` | `3C` | 4 | push X — **low byte first**, so the stack holds high:low in ascending order | `-----` |
-| `PULX` | `38` | 5 | pull X | `-----` |
-| `STD` | `DD` `ED` `FD` (`CD`‡) | 4/5/5 | `M:M+1 ← D` | `-**0-` |
-| `SUBD` | `83` `93` `A3` `B3` | 4/5/6/6 | `D ← D − M:M+1` | `-****` |
+| `ABX` | `3A` | 3 | `X ← X + B`, B unsigned, carry into IXH, no flags (A-4) | `-----` |
+| `ADDD` | `C3` `D3` `E3` `F3` | 4/5/6/6 | `D ← D + M:M+1`; H not affected (A-7) | `-****` |
+| `ASLD` (= `LSLD`) | `05` | 3 | `D ← D << 1`, C ← bit 15, V ← N⊕C after the shift (A-10, A-55) | `-****` |
+| `LDD` | `CC` `DC` `EC` `FC` | 3/4/5/5 | `D ← M:M+1` (A-51) | `-**0-` |
+| `LSRD` | `04` | 3 | `D ← D >> 1`, C ← bit 0, N ← 0, V ← N⊕C = C (A-57) | `-0***` |
+| `MUL` | `3D` | 10 | `D ← A × B`, unsigned 8×8→16; **only C changes: C ← bit 7 of B**, the low result byte, so that a following `ADCA #0` rounds (A-58) | `----*` |
+| `PSHX` | `3C` | 4 | push X — **IXL first, then IXH** (A-63), so the stack holds high:low in ascending order | `-----` |
+| `PULX` | `38` | 5 | pull X — IXH first, then IXL (A-65) | `-----` |
+| `STD` | `DD` `ED` `FD` (`CD`‡) | 4/5/5 | `M:M+1 ← D` (A-76) | `-**0-` |
+| `SUBD` | `83` `93` `A3` `B3` | 4/5/6/6 | `D ← D − M:M+1` (A-80) | `-****` |
 
 Plus two behavioural changes on opcodes the 6800 already had:
 
-- **`CPX`'s flags.** `CPX` computes a 16-bit difference and, on **both**
-  parts, leaves C alone — there is no borrow out of `CPX`, which is why the
-  documented idiom after `CPX` is `BEQ`/`BNE` and not `BCC`/`BCS`. The
-  long-standing account in the emulator community is that on the **MC6800**
-  only Z reflects all sixteen bits while N and V come from the high-byte
-  subtraction alone, and that the **MC6801** made N and V correct.
-  **`[unverified here]`** — this session could not render the scanned manuals
-  (no PDF rasteriser on this machine, see [validation.md](validation.md)), so
-  the claim is carried forward unchecked. MAME uses one shared `cmpx` handler
-  for both parts and therefore models no difference at all
-  (`6800ops.hxx`, `cmpx_*`), which is either MAME being wrong or the account
-  being wrong. **Milestone 1 of the handoff resolves this against M68PRM's
-  CPX page and M6801RM Appendix A before any `CPX` test is written.**
-- **`TAP`/`TPA` and the branches, index and stack operations get faster.** The
-  6801 is not just "the 6800 plus instructions": 79 shared opcodes have
-  different cycle counts. See [timing.md](timing.md).
+- **`CPX`'s flags — the one documented semantic difference.** Settled from the
+  manuals on 2026-09-18:
+  - **MC6800** (M68PRM p. A-33): `CPX` is two byte compares, `IXH − M` and
+    `IXL − (M+1)`. **Z** is set only if *both* byte results are zero, so it
+    reflects all sixteen bits; **N** and **V** come from the high-byte
+    subtraction alone (`N = RH7`, `V = IXH7·¬M7·¬RH7 + ¬IXH7·M7·RH7`), and the
+    manual adds that they are "not intended for conditional branching";
+    **C is not affected**. There is no borrow from the low byte into the high
+    byte, so N and V can differ from a true 16-bit compare.
+  - **MC6801/6803** (M6801RM p. A-39): "a 16 bit subtract of (M:M+1) from the
+    index register", with **N, Z, V and C all set** from the 16-bit result,
+    C being the borrow. M6801RM §4.3.3.3 says this is new: on the MC6801
+    "internal processing has been modified such that it can be used for
+    branching similar to the single byte comparisons", with a `CPX` followed
+    by `BHI` as its example — which works only because C is now set.
+  - **MAME 0.285 is wrong for the MC6800**: its one shared handler
+    (`6800ops.hxx:1107`, `cpx_im`, and the `_di`/`_ix`/`_ex` forms) does a
+    16-bit subtract with `SET_FLAGS16`, which sets C and computes N and V over
+    sixteen bits on both parts. It is right for the 6801. The 6800 core
+    therefore disagrees with MAME on `CPX`'s N, V and C by design; see
+    [undocumented-behavior.md](undocumented-behavior.md).
+  - The extra work costs the 6801 a cycle: `CPX` is the only instruction that
+    is **slower** on the 6801 (4/5/6/6 against 3/4/5/6).
+- **Speed.** The 6801 is not just "the 6800 plus instructions": among the
+  opcodes both manuals document, **72 are faster** on the 6801 and the three
+  non-indexed `CPX` forms are slower; `TAP`/`TPA` and every other inherent
+  two-cycle instruction are unchanged. See [timing.md](timing.md).
 
 ### DAA and the half-carry
 
-`DAA` ($19, inherent, 2 cycles) exists to fix up a BCD addition. Its rule
-(M68PRM, DAA; MAME `6800ops.hxx`, `daa`) adds a correction factor to A:
+`DAA` ($19, inherent, 2 cycles) exists to fix up a BCD addition. M68PRM
+pp. A-34/A-35 (and M6801RM p. A-40) give it as a nine-row table of C, the
+upper nibble, H and the lower nibble; this rule, which is MAME's `daa`,
+reproduces that table on all 384 BCD cases it covers (checked 2026-09-18):
 
 ```
 low  = A & $0F
@@ -334,15 +356,19 @@ A ← A + cf;  C ← C or (carry out);  N, Z from the result
 
 Three things a core must get right:
 
-1. **C is sticky.** `DAA` never clears C — `CLR_NZV` in MAME's handler keeps
-   the carry from the preceding add, then ORs in its own. A BCD add of
-   `$99 + $01` leaves C set through the `DAA`.
+1. **C is sticky.** `DAA` never clears C: every table row with C = 1 before
+   has C = 1 after, and `CLR_NZV` in MAME's handler keeps the carry from the
+   preceding add, then ORs in its own. BCD `$99 + $99` leaves A = `$32`, C = 1,
+   H = 1; `DAA` adds `$66`, giving `$98` with no carry out of its own, and C
+   stays 1 — the correct decimal 198.
 2. **H must be right or `DAA` is wrong.** H is set only by `ADDA`, `ADDB`,
    `ADCA`, `ADCB` and `ABA`: it is the carry out of bit 3, i.e.
    `((a ^ m ^ result) & $10) != 0`. Nothing else — not `SUBA`, not `INCA`,
    not the 6801's `ADDD` — touches it.
-3. **V after `DAA` is undefined in the manual**; MAME clears it. See
-   [undocumented-behavior.md](undocumented-behavior.md).
+3. **V after `DAA` is "Not defined"** (M68PRM p. A-34, M6801RM p. A-40); MAME
+   clears it. See [undocumented-behavior.md](undocumented-behavior.md).
+4. **H is not affected** by `DAA` itself (both manuals), and neither is it by
+   any subtract, compare, shift or `NEG`.
 
 `DAA` only corrects **additions**. There is no decimal-subtract fixup on this
 family; 6800 code subtracts BCD by nines-complement addition.
@@ -398,9 +424,32 @@ seven, and CC goes `$C8 → $D0` — I set, the rest preserved.
   NMI has priority over IRQ1.
 - `SWI` ($3F, 12 cycles) pushes the frame, sets I, vector `$FFFA`. It is an
   instruction, so it is never "pending".
+- **Entry costs 12 cycles on both parts**, the same as `SWI`. MCSDD's MC6800
+  data sheet, Figure 13 "Interrupt Timing" (printed p. 17), numbers them: the
+  next opcode is fetched and discarded, one internal cycle, seven pushes, one
+  internal cycle in which I is set, and the two vector reads; the routine's
+  first opcode follows. M6801RM §5.3 says it in words — "the interrupt
+  sequence requires 12 MPU E-cycles to complete once it has begun" — with the
+  cycle-by-cycle Figure 5-12 (p. 5-14). The **13** often quoted is a
+  *response time*: M6801RM gives 13 cycles from `NMI` going active to the
+  routine's first fetch (one cycle to recognise it, then 12) and 14 for `IRQ1`,
+  whose recognition adds a synchronising cycle. MAME charges 12, as measured
+  in [mame-oracle.md](mame-oracle.md).
 - **`CLI` and `TAP` delay recognition by one instruction.** A pending `IRQ`
   unmasked by `CLI` is not taken until the instruction *after* the `CLI` has
-  run. MAME 0.285 encodes this literally: `cli` executes the next opcode
+  run. For the MC6801 this is stated exactly (M6801RM §5.4.1.1-5.4.1.3,
+  pp. 5-18/5-19): clearing I goes through a buffer, `ITMP`, and lands one
+  cycle late, so "assuming the I-bit is not already clear … the instruction
+  following CLI will always be executed prior to servicing any maskable
+  interrupt"; `SEI` "is not delayed"; `TAP` always lets the next instruction
+  run, even another `TAP`; and after `RTI` the delay "is absorbed by the
+  remaining cycles of the instruction", so an `IRQ` still pending is taken
+  straight after `RTI`. M68PRM states no such rule for the MC6800; its
+  §3.3.8 "Look-Ahead Feature" (p. 3-7) says only that an interrupt arriving
+  during the last cycle of an instruction is held until the *next*
+  instruction completes, which has the same effect for `CLI`. The 6800
+  behaviour is therefore **inferred, not stated**. MAME 0.285 encodes the
+  6801 rules literally: `cli` executes the next opcode
   inline via `execute_one()` **only if I was actually set** before the `CLI`,
   then checks the lines; `tap` always does, with the comment "TAP temporarily
   sets the I flag and blocks IRQ until the next opcode (if the next opcode is
@@ -410,8 +459,9 @@ seven, and CC goes `$C8 → $D0` — I set, the rest preserved.
   the 6800 core that changed between those two releases**, so a document
   derived from the wrong tree gets it wrong. This project cites 0.285, the
   version installed here ([validation.md](validation.md)).
-- Reset sets I, clears nothing else that is specified, and loads PC from
-  `$FFFE`. A, B, IX and SP are **undefined** after reset on real silicon. MAME
+- Reset sets I ("during the restart routine, the interrupt mask bit is set",
+  MCSDD's MC6800 data sheet, printed p. 26), clears nothing else that is
+  specified, and loads PC from `$FFFE`. A, B, IX and SP are **undefined** after reset on real silicon. MAME
   leaves them at 0 and sets CC to `$D0` (`m6800.cpp:577-585`); the trace
   confirms `1200 0 0 0 0 D0 0 0` as the first line. A core should expose reset
   state as explicitly undefined and let the host choose, but matching MAME's
@@ -420,13 +470,27 @@ seven, and CC goes `$C8 → $D0` — I set, the rest preserved.
 ### WAI
 
 `WAI` ($3E, 9 cycles) is the reason this family has a low-latency interrupt
-path. It **pushes the whole frame first**, then halts with the bus released,
+path. It **pushes the whole frame first**, then halts (on the 6800 with the
+bus released),
 and when an interrupt arrives the CPU only has to set I and fetch the vector —
 the stacking has already happened. Consequences a core must model:
 
 - The frame is on the stack *before* the wait, so an interrupt taken out of
   `WAI` must **not** push again. MAME's `enter_interrupt` charges 4 cycles in
   the `WAI` case and 12 otherwise (`m6800.cpp:449-473`).
+- **On the 6801 the 4 agrees with the manual.** M6801RM §5.4.2 (pp. 5-19 to 5-21,
+  Figure 5-15 on p. 5-20) gives five cycles from `NMI` to the routine's first
+  fetch out of `WAI` and six for `IRQ1`; on the accounting that makes the
+  ordinary case 13 = 1 + 12 and 14 = 2 + 12, that is 4 cycles of sequence.
+- **On the 6800 it may be 5.** MCSDD's Figure 14 "Wait Instruction Timing"
+  (printed p. 18) draws three cycles after the wake-up before the two vector
+  reads, one more than the 6801's figure, and the 6800 has a reason the 6801
+  lacks: it floats its buses during `WAI` (Bus Available high) and must take
+  them back, whereas "contrary to the MC6800, none of the ports are driven to
+  the high impedance state by a WAI instruction" on the 6801 (M6801RM
+  §5.4.2). This is a reading of a timing diagram, not a table, so it stays
+  **`[unresolved: 4 or 5]`** for the MC6800 and is carried in
+  [timing.md](timing.md).
 - If I = 1 and only `IRQ` is pending, `WAI` waits forever (until `NMI` or
   reset). MAME's `wai` handler calls `check_irq_lines()` immediately and, if
   still waiting, `eat_cycles()` — it burns the rest of the timeslice
