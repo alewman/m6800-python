@@ -1,8 +1,9 @@
-"""Regenerate the instruction table in docs/start-here.md from MAME's source.
+"""Print MAME's view of the 6800/6801 instruction table, as a detector.
 
-The table in docs/start-here.md is mechanically derived, not typed by hand, so
-that a MAME upgrade cannot silently leave it stale.  It reads four tables out
-of MAME's 6800 core:
+The table in docs/start-here.md is generated from the Motorola manuals by
+scripts/extract_manual_tables.py --markdown, which borrows this script's
+opcode grouping and names.  Run this one to see what MAME believes, and diff
+the two after any MAME upgrade.  It reads four tables out of MAME's 6800 core:
 
     m6800.cpp   cycles_6800[256], m6800_insn[0x100]
     m6801.cpp   cycles_6803[256], m6803_insn[0x100]
@@ -11,8 +12,12 @@ of MAME's 6800 core:
 
 MAME is an *emulator-derived* source (docs/validation.md): this script tells
 you what MAME believes, and the Motorola manuals decide whether MAME is right.
-Two known places where it is not are marked in the generated table and
-explained in docs/undocumented-behavior.md.
+The flag column comes from MAME's handler *comments* (plus EXTRA_FLAGS for
+handlers without one), and the manuals show it wrong on 52 documented opcodes
+where MAME's *code* is right: H marked "?" on the subtracts, compares, NEG and
+the left shifts; V missing on ASR/LSR/ROR and their D forms; C missing on TST;
+Z on MUL; V on DAA given as 0 where the manuals say "not defined".  Never read
+flags from this output.
 
     python scripts/dump_mame_tables.py [--mame-src DIR] > table.md
 
@@ -122,11 +127,8 @@ def _cycles(text: str, array: str, cls: str) -> list[int]:
     return [sentinel if v == "XX" else int(v) for v in values]
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--mame-src", type=Path, default=DEFAULT_SRC)
-    source = parser.parse_args().mame_src
-
+def load(source: Path = DEFAULT_SRC) -> dict[str, dict[str, dict]]:
+    """Group every opcode MAME executes by Motorola mnemonic and addressing mode."""
     m6800 = (source / "m6800.cpp").read_text()
     m6801 = (source / "m6801.cpp").read_text()
     dasm = (source / "6800dasm.cpp").read_text()
@@ -156,6 +158,13 @@ def main() -> None:
             "c6800": cyc_6800[opcode], "c6803": cyc_6803[opcode],
             "legal_6800": legal_6800, "flags": flags.get(opcode, "?????"),
         }
+    return grouped
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--mame-src", type=Path, default=DEFAULT_SRC)
+    grouped = load(parser.parse_args().mame_src)
 
     def cell(entry: dict | None) -> str:
         if entry is None:
