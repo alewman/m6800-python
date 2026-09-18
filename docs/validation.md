@@ -95,22 +95,32 @@ Each of these was looked for and **not found** (2026-09-12):
 documented instruction set.** The plan below is built on that fact rather than
 around it.
 
-### Gerry Wheeler, *BYTE*, December 1977 — the one contemporary account
+### Gerry Wheeler, *BYTE*, December 1977 — the one contemporary account (read)
 
 "Undocumented M6800 Instructions", *BYTE* vol. 2 no. 12, pp. 46-47; scan at
-<https://archive.org/details/byte-magazine-1977-12> (Internet Archive, the
-magazine's own copyright). Wheeler worked out what a number of the 59
-unassigned opcodes do on real parts and named `$9D`/`$DD` **HCF**. **This
-project has not read the article's tables** — only its bibliographic record
-and secondary summaries — and doing so is the single highest-value document
-task for the build session ([undocumented-behavior.md](undocumented-behavior.md)).
+<https://archive.org/details/byte-magazine-1977-12>, file
+`1977_12_BYTE_02-12_The_Star_Trek_Computers.pdf`, 142,627,639 bytes, SHA-1
+`53af342f2bc68753924f4036ba7f81898cabb09f` (Internet Archive's own record),
+SHA-256 `f9b5e8d87bba424e71a5156d9090f66adc468e3b4212a7ab786ac1d9e1020d5d`;
+the magazine's copyright, so the scan stays in the gitignored `reference/`.
+**Read on 2026-09-18.** Wheeler executed the 59 unassigned opcodes on his
+machine and describes six in Table 1 and Figure 1: `$14` (A AND B → A), the
+four store-immediate slots (which skip a byte and are three or four bytes
+long, unlike MAME's), and HCF (`$9D`/`$DD`). No cycle counts; the rest are
+"just NOPS" or change the flags by an "undeciphered" pattern, unnamed. Tier:
+a measurement on one unknown-revision part, published without method.
+Details and what the core does with each: [undocumented-behavior.md](undocumented-behavior.md).
 
-### Doc TB, x86.fr, 2019 — hardware-captured, two opcodes
+### Doc TB, x86.fr, 2019 — hardware-captured, seven opcodes (read)
 
 <https://x86.fr/investigating-the-halt-and-catch-fire-instruction-on-motorola-6800/>,
-2019-07-17: an MC6800P run at 1 MHz on a Universal Chip Analyzer, address-bus
-behaviour after `$9D`/`$DD` captured directly. **Tier: hardware-captured**, for
-those two opcodes and nothing else. No licence stated; cited, not copied.
+2019-07-17: an MC6800P run at 1 MHz on a Universal Chip Analyzer. **Read on
+2026-09-18.** Captured: `$9D`/`$DD` lock up until reset and, 64 ms after the
+fetch, drive the address bus as a clean counter at 500 kHz; `$FD` does the same
+at 250 kHz; `$CD`/`$ED` also lock up, with glitchy address lines; `$15` is a
+2-cycle NOP; `$14` ANDs the accumulators into A on a later MC6800P but not on
+an early XC6800 prototype. **Tier: hardware-captured**, for those seven. No
+licence stated; cited, not copied.
 
 ### Motorola manuals — the judge (fetched, pinned, and read)
 
@@ -232,16 +242,16 @@ reorder them; each one's failure is cheapest to diagnose before the next.
 | 3 ✅ | Boot-segment replay of `dragrace` (`scripts/mame_trace.sh dragrace 2 :maincpu`, 368,676 lines, 483 IRQ entries) and of `kncljoe`'s 6803 sound CPU, comparing `curpc a b x s cc` and `totalcycles` deltas per line, special-casing `CLI`/`TAP` | MAME, detector | hundreds of thousands of instructions of real arcade code agree, on both parts |
 | 4 | Williams sound-board host: memory map, one PIA with CB1 edge detection, an IRQ line, a DAC sink; drive it from the Robotron trace's command stream | MAME, detector | the 6808 runs a real sound ROM under a real host contract |
 | 5 | Cross-check against **sim68xx** and **shdl6800** on the step-2 cases; three-way diff | independent emulators, detectors | every rule in the core is datasheet-backed or agreed by three independent implementations, and shdl6800's RTL gives a second opinion on cycle counts |
-| 6 | The undocumented set: HCF as a halt state, and the Wheeler table once the *BYTE* article has been read | hardware-captured (HCF), secondary (the rest) | the two opcodes anyone has measured behave correctly; everything else stays explicitly `[unverified]` |
+| 6 ✅ | The undocumented set: HCF as a halt state, and the Wheeler table once the *BYTE* article has been read (done 2026-09-18: both sources read; `undocumented="strict"`, `"measured"`, `"mame"`) | hardware-captured (HCF), secondary (the rest) | the two opcodes anyone has measured behave correctly; everything else stays explicitly `[unverified]` |
 
 ## The record so far (2026-09-18)
 
 Rungs 0 to 3 pass. Every number below was produced by the command beside it,
 on CPython 3.14.4.
 
-**Rung 1 — the manuals (tier: datasheet, the judge).** `pytest` runs 830
-tests for this rung, and 2 more for rung 2 when the corpus exists; about 7 s in
-all. `tests/test_datasheet.py` checks all 197 MC6800 and 220
+**Rung 1 — the manuals (tier: datasheet, the judge).** `pytest` runs 847
+tests without the corpus (rungs 1 and 6), and 2 more for rung 2 when the corpus
+exists; about 7 s in all. `tests/test_datasheet.py` checks all 197 MC6800 and 220
 MC6803 opcodes from 40 random states each against `tests/datasheet.py` (cycles,
 length, every flag the manual marks `-`, `0` or `1`); `tests/test_alu.py`
 checks the `*` flags bit by bit against the manuals' printed Boolean formulae,
@@ -266,7 +276,7 @@ them, comparing registers, memory, cycles and the exact bus access sequence.
 The explained differences are all one fact: after `TAP` or `RTI` the core
 keeps CC bits 7-6 at 1, as the manuals do (M68PRM pp. A-67, A-70, A-72,
 A-76), while MAME stores all eight bits. The undocumented opcodes agree
-because the comparison runs with `mame_compat=True`; that is agreement with
+because the comparison runs with `undocumented="mame"`; that is agreement with
 MAME's guess, not evidence about silicon.
 
 **Rung 3 — real arcade code against MAME (tier: emulator-derived).**
@@ -282,11 +292,20 @@ cycle total, and every interrupt entry.
 | `kidniki` | MC6803 | 10,544,332 | 160,015 NMI, 544 IRQ, 182 back-to-back | all agree |
 
 Drag Race executes one undocumented opcode, `$02` at `$1230`; it replays
-only because `mame_compat=True` gives it MAME's behaviour. `MUL` and `SUBD`
+only because `undocumented="mame"` gives it MAME's behaviour. `MUL` and `SUBD`
 occur in none of the traces.
 
-**Open, carried forward:** the MC6800's `WAI`-exit cost (4 or 5); what a real
-part does with every unassigned opcode but HCF; rungs 4 to 6.
+**Rung 6 — the undocumented set (tier: measured on silicon, 1977 and 2019).**
+Both published measurements have been read and are implemented under
+`undocumented="measured"`, each line citing its source: `$14` NBA, `$15` NOP,
+Wheeler's store-immediate forms, and the HCF family (`$9D $DD $FD $CD $ED`),
+which halts under every policy but `"mame"`. `tests/test_undocumented.py`
+checks each against the article's table. Cycle counts nobody measured are
+marked `[unverified]`.
+
+**Open, carried forward:** the MC6800's `WAI`-exit cost (4 or 5); HCF's bus
+activity (not modelled); what a real part does with the ~50 unassigned opcodes
+neither source describes; rungs 4 and 5.
 
 ### What would raise the ceiling
 
