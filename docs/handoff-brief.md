@@ -40,7 +40,7 @@ verification against silicon.
 2. `docs/undocumented-behavior.md` — HCF, the store-immediate family, the 53/31
    illegal opcodes, the undefined flags, and which of MAME's answers are
    inventions.
-3. `docs/timing.md` — the cycle model, the 78 shared opcodes the 6801 runs
+3. `docs/timing.md` — the cycle model, the 72 shared opcodes the 6801 runs
    faster and the three it runs slower, interrupt costs measured from a real
    trace, and the Williams sound-board host contract.
 4. `docs/validation.md` — the oracle inventory, the tiers, the pinned hashes,
@@ -59,13 +59,18 @@ executes one instruction **or** one interrupt-entry sequence and returns its
 cycle count. Dependency-free, Python 3.12+, CPython and PyPy. Then pass the
 validation plan in order.
 
-### Milestone 0 — read the manuals (do this first, it is not optional)
+### Milestone 0 — read the manuals ✅ done 2026-09-18
+
+**Status:** done; the results are recorded in `docs/validation.md` ("Motorola
+manuals"). The scans turned out to carry an OCR text layer, and with
+poppler-utils installed `scripts/extract_manual_tables.py` reads both Appendix
+A's. `CPX` is settled (MAME is wrong for the 6800) and interrupt entry is 12
+cycles on both parts. One piece remains open: the MC6800's `WAI` exit, 4 or 5
+cycles. The original instructions follow.
 
 `python scripts/fetch_reference_docs.py` puts four hash-pinned bitsavers scans
-in `reference/`. **This session could not read them**: they are image-only
-scans and the machine has no PDF rasteriser (`pdftoppm`/poppler absent, no
-`pypdf`). Install poppler-utils, or use another machine, or OCR them — but
-read them.
+in `reference/`. The session that wrote this brief could not read them (no PDF
+rasteriser on the machine at the time) — read them.
 
 - **Acceptance:** `docs/start-here.md`'s instruction table is re-checked
   against M68PRM Appendix A and M6801RM Appendix A, cell by cell, and every
@@ -198,8 +203,11 @@ the section `docs/undocumented-behavior.md` is missing.
 
 ## Known open questions to carry, not to resolve silently
 
-- `CPX` flags on the 6800 versus the 6801 (milestone 0).
-- Interrupt entry: 12 or 13 cycles; `WAI` exit: 4 or something else.
+- ~~`CPX` flags on the 6800 versus the 6801~~ — settled in milestone 0:
+  M68PRM p. A-33 versus M6801RM p. A-39; MAME is wrong for the 6800.
+- ~~Interrupt entry: 12 or 13 cycles~~ — 12 on both parts (MCSDD Figure 13,
+  M6801RM §5.3). `WAI` exit: 4 on the 6801 (M6801RM §5.4.2); **still open on
+  the MC6800**, where MCSDD Figure 14 reads as 5.
 - What a real MC6800 does with `$87`, `$8F`, `$C7`, `$CF` (and `$CD` on the
   6801) — MAME stores into the instruction stream; nobody has measured it.
 - What a real MC6800 does with the other 47 unassigned opcodes. Drag Race's

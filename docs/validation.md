@@ -112,7 +112,7 @@ task for the build session ([undocumented-behavior.md](undocumented-behavior.md)
 behaviour after `$9D`/`$DD` captured directly. **Tier: hardware-captured**, for
 those two opcodes and nothing else. No licence stated; cited, not copied.
 
-### Motorola manuals — the judge (fetched and pinned; **not yet read**)
+### Motorola manuals — the judge (fetched, pinned, and read)
 
 `scripts/fetch_reference_docs.py` downloads four bitsavers scans into the
 gitignored `reference/` directory and verifies each against a pinned SHA-256.
@@ -128,15 +128,40 @@ Run on 2026-09-12, all four verify:
 Licence: Motorola's copyright; bitsavers hosts the scans for reference. They
 are not redistributed, and `reference/` is gitignored.
 
-**They have not been read in this repository.** These are image-only scans and
-this machine has no PDF rasteriser (`pdftoppm`/poppler absent, no `pypdf`), so
-nothing in these documents has been checked here. Everything in
-[start-here.md](start-here.md) presented as "the manual says" is currently
-**the emulator-and-community account of what the manual says**, mechanically
-derived from MAME plus general knowledge, and it is the build session's first
-job to read the scans and correct it. The two claims most at risk are named in
-those documents: the **`CPX` flag difference** between 6800 and 6801, and the
-**12-versus-13-cycle** interrupt entry.
+**Read on 2026-09-18 (milestone 0).** The scans carry bitsavers' OCR text
+layer, so `pdftotext -layout` (poppler-utils) reads the prose and the
+per-instruction tables; the flag tables and timing diagrams were checked on
+pages rendered with `pdftoppm`. What was done with them:
+
+- `scripts/extract_manual_tables.py` reads every Appendix A instruction page
+  of M68PRM (pp. A-3 to A-76) and M6801RM (pp. A-3 to A-90). It takes each
+  opcode from the octal and decimal columns, which must agree, and lists the
+  ten rows the text layer scrambles, each read off the rendered page. It finds
+  **197** documented opcodes in M68PRM and **220** in M6801RM.
+- **Cycle and byte counts: MAME 0.285 agrees with the manuals on every
+  documented opcode of both parts** (`--report`). The table in
+  [start-here.md](start-here.md) is now generated from the manuals
+  (`--markdown`), not from MAME.
+- **Flag rules: the old table was wrong on 52 opcodes**, because its flag
+  column came from MAME's handler *comments*; MAME's *code* agrees with the
+  manuals on all of them. Corrected in start-here.md, each with its page.
+- **`CPX` is settled, and MAME is wrong for the MC6800**: M68PRM p. A-33
+  gives two byte compares, Z over both, N and V from the high byte, C not
+  affected; M6801RM p. A-39 gives a true 16-bit compare setting N Z V C.
+  MAME applies the 6801 rule to both.
+- **Interrupt entry is 12 cycles** on both parts: MCSDD's MC6800 data sheet,
+  Figure 13, and M6801RM §5.3 / Figure 5-12. The quoted 13 is a response
+  time (one recognition cycle plus 12). Out of `WAI`, 4 on the 6801
+  (M6801RM §5.4.2); on the 6800 MCSDD Figure 14 reads as 5, so that one stays
+  **`[unresolved: 4 or 5]`**.
+- `DAA`'s rule reproduces M68PRM's nine-row table on all 384 BCD cases, and
+  its V is "not defined" in both manuals.
+- The `CLI`/`SEI`/`TAP`/`RTI` interrupt-delay rules are stated in M6801RM
+  §5.4.1 and match MAME 0.285; M68PRM states no such rule for the MC6800
+  (only §3.3.8's look-ahead), so the 6800 behaviour is marked inferred.
+
+APPS (the applications manual) was not needed for any of this and has **not**
+been read; it is extracted and searchable when something calls for it.
 
 ### MAME 0.285 — emulator-derived, the working detector
 
@@ -200,7 +225,7 @@ reorder them; each one's failure is cheapest to diagnose before the next.
 
 | Step | Gate | Judge or detector | Claim earned |
 | --- | --- | --- | --- |
-| 0 | **Read the four scans.** Correct [start-here.md](start-here.md) and [timing.md](timing.md) from M68PRM Appendix A, MCSDD's instruction-execution tables and M6801RM Appendix A. Settle `CPX`'s flags and the interrupt-entry cycle count | datasheet, **judge** | the table this project tests against is Motorola's, not MAME's |
+| 0 ✅ | **Read the four scans** (done 2026-09-18; results above). Correct [start-here.md](start-here.md) and [timing.md](timing.md) from M68PRM Appendix A, MCSDD's instruction-execution tables and M6801RM Appendix A. Settle `CPX`'s flags and the interrupt-entry cycle count | datasheet, **judge** | the table this project tests against is Motorola's, not MAME's |
 | 1 | Per-opcode unit tests transcribed from the corrected table: bytes, cycles, flags, for both `M6800` and `M6803` classes; plus `PSHX`/`PULX` order, `RTI` with both stack contents, `WAI`, `SWI`, and the three interrupt entries | datasheet, **judge** | documented semantics and counts as Motorola states them |
 | 2 | **Generate** a single-step corpus from MAME, the way `neetandev/m6809` was generated for the 6809, and run all 256 opcodes × N random states through it, comparing registers, memory and cycle count | MAME, detector | agreement with MAME on every documented opcode; every disagreement listed with the higher-tier source the core follows instead |
 | 3 | Boot-segment replay of `dragrace` (`scripts/mame_trace.sh dragrace 2 :maincpu`, 368,676 lines, 483 IRQ entries) and of `kncljoe`'s 6803 sound CPU, comparing `curpc a b x s cc` and `totalcycles` deltas per line, special-casing `CLI`/`TAP` | MAME, detector | hundreds of thousands of instructions of real arcade code agree, on both parts |
