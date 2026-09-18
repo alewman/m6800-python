@@ -508,22 +508,44 @@ still the only halt instruction.
 
 ## The embedding contract
 
-Same as `z80-python` and `6502-python`. The host owns memory and I/O:
+Same as `z80-python` and `6502-python`. The host owns memory and I/O
+(`src/m6800_python/cpu.py`; `scripts/williams_sound.py` is a complete host):
 
 ```python
-cpu = M6800(read_byte=bus.read, write_byte=bus.write)   # or M6803(...)
-cpu.reset()
+from m6800_python import M6800, M6803   # also M6802/M6808 (= M6800), M6801 (= M6803)
+
+cpu = M6800(bus.read, bus.write)          # read_byte(address) -> int, write_byte(address, value)
+cpu.reset()                               # I set, other flags clear, PC from $FFFE
 while True:
-    cycles = cpu.step()       # one instruction, or one interrupt entry
-    bus.tick(cycles)          # host advances timers, video, PIAs
-    cpu.irq = bus.irq_level   # sampled at the next instruction boundary
+    cycles = cpu.step()                   # one instruction, or one interrupt entry
+    bus.tick(cycles)                      # host advances timers, video, PIAs
+    cpu.irq = bus.irq_level               # sampled at the next instruction boundary
 ```
 
 - `step()` executes exactly one instruction **or** one interrupt-entry
-  sequence and returns the cycle count it consumed.
-- `A`, `B`, `X`, `SP`, `PC`, `CC` are plain attributes; on the 6803 class `D`
-  is a property over `A:B`.
-- `nmi` is edge-sensitive, `irq` level-sensitive; both are sampled at
-  instruction boundaries, with the `CLI`/`SEI`/`TAP` one-instruction delay
-  applied.
+  sequence and returns the cycles it took: the manual's count for the opcode,
+  12 for an interrupt entry, 4 for one out of `WAI`, and 1 for each step spent
+  waiting in `WAI` or halted by HCF.
+- `A`, `B`, `X`, `SP`, `PC`, `CC` are plain attributes, which the host may
+  read and set; keep CC bits 7-6 set. On `M6803`, `D` is a property over
+  `A:B`.
+- Inputs: `irq` is a level (`True` while the line is asserted); `nmi` is
+  edge-triggered, recognised when it goes from `False` to `True` at a
+  boundary, and `pulse_nmi()` latches an edge directly. On `M6803`, `irq2`
+  holds the vector of the highest-priority pending on-chip request (`$FFF6`
+  input capture, `$FFF4` output compare, `$FFF2` timer overflow, `$FFF0`
+  SCI) or `None`; `irq` outranks it. The timer, SCI and ports themselves are
+  the host's.
+- Interrupt timing: `NMI` first, then `IRQ` if I is clear — except in the
+  step after a `TAP`, or after a `CLI` that holds interrupts off (always on
+  the 6801, only after an odd opcode on the MC6800; see "Entry rules").
+- State flags: `waiting` is `True` inside `WAI`; `halted` after HCF, cleared
+  only by `reset()`.
+- `undocumented=` chooses what unassigned opcodes do: `"strict"` (default:
+  HCF halts, the rest raise `UndocumentedOpcode`), `"measured"` (what Wheeler
+  1977 and Doc TB 2019 observed), `"mame"` (MAME 0.285's guesses, for trace
+  replay). See [undocumented-behavior.md](undocumented-behavior.md).
+- Not modelled: the MC6800's dummy bus reads (the core makes only the reads
+  and writes an instruction needs, as MAME does), interrupt races inside an
+  instruction ([timing.md](timing.md)), and HCF's bus activity.
 - The core never reaches for a clock, a timer, a PIA or a file.
