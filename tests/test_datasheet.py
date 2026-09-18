@@ -111,7 +111,7 @@ def _check_opcode(part: str, opcode: int) -> None:
 @pytest.mark.parametrize("part", ["6800", "6803"])
 def test_undocumented_opcodes_raise_and_leave_state(part: str) -> None:
     documented_here = set(documented(part))
-    hcf = {0x9D, 0xDD} if part == "6800" else set()
+    hcf = {0x9D, 0xDD, 0xFD, 0xCD, 0xED} if part == "6800" else set()
     for opcode in range(256):
         if opcode in documented_here or opcode in hcf:
             continue

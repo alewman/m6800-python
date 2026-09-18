@@ -4,7 +4,7 @@
 
 Reads tests/vectors/m6800/XX.jsonl and tests/vectors/m6803/XX.jsonl (made by
 scripts/mame_corpus.py), runs each case through ``M6800``/``M6803`` with
-``mame_compat=True`` -- so that the opcodes Motorola does not assign follow
+``undocumented="mame"`` -- so that the opcodes Motorola does not assign follow
 MAME too -- and compares registers, final memory, cycles, the exact sequence
 of bus reads and writes, and whether WAI left the CPU waiting.
 
@@ -64,7 +64,7 @@ def run_case(cls, case: dict) -> dict[str, tuple]:
     """Return {field: (mame, core)} for every field that differs."""
     initial, final = case["initial"], case["final"]
     memory = Memory(initial["ram"])
-    cpu = cls(memory.read, memory.write, mame_compat=True)
+    cpu = cls(memory.read, memory.write, undocumented="mame")
     cpu.PC, cpu.SP, cpu.X = initial["pc"], initial["s"], initial["x"]
     cpu.A, cpu.B, cpu.CC = initial["a"], initial["b"], initial["cc"]
     try:

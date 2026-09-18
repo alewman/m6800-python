@@ -210,7 +210,7 @@ def replay(game: str, trace: Path, limit: int | None = None) -> int:
     rom = rom_image(machine, game)
     bus = ReplayBus(machine, rom)
     cls = M6800 if machine.part == "6800" else M6803
-    cpu = cls(bus.read, bus.write, mame_compat=True)
+    cpu = cls(bus.read, bus.write, undocumented="mame")
     targets = {name: (rom[v] << 8) | rom[v + 1] for name, v in VECTORS.items()}
     first = line
     cpu.PC, cpu.A, cpu.B, cpu.X, cpu.SP, cpu.CC = (
@@ -318,7 +318,7 @@ def replay(game: str, trace: Path, limit: int | None = None) -> int:
     }
     print(
         f"  distinct opcodes executed: {len(opcodes)}; undocumented ones (MAME's "
-        f"behaviour, via mame_compat): {undocumented or 'none'}"
+        f"behaviour, via undocumented='mame'): {undocumented or 'none'}"
     )
     if machine.part == "6803":
         only = {
