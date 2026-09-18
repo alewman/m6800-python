@@ -258,6 +258,61 @@ Use this game, not Robotron, when the build session needs 6803-specific
 evidence: `MUL`, `LDD`/`STD`, `ADDD`/`SUBD` and `PSHX`/`PULX` all appear in
 Irem-era sound code, and none of them exist on a 6800.
 
+## Full replay with watchpoints (milestone 3, 2026-09-18)
+
+The boot-segment replay planned below turned out not to need a stop at the
+first I/O read. MAME's debugger can log every memory access, so the replay
+feeds the core exactly the values MAME read and checks every write:
+
+```sh
+M6800_WATCH_READS=0000-0FFF,2000-F7FF M6800_WATCH_WRITES=0000-FFFF \
+  scripts/mame_trace.sh dragrace 2 :maincpu mame-work/dragrace
+python scripts/replay_trace.py dragrace
+```
+
+`scripts/mame_trace.lua` turns the two variables into `wpset
+START,LENGTH,r|w,1,{logerror "R %X %X\n",wpaddr,wpdata; g}`, so each
+instruction line in `error.log` is followed by `R addr value` / `W addr value`
+lines for what it did. `scripts/replay_trace.py` loads ROM from the zip at
+the addresses the driver maps, serves every other read from the log (same
+address, same order, or it stops), checks every write, compares registers
+before every instruction and the running `totalcycles`, and raises an
+interrupt on the core wherever MAME took one, recognised by the vector
+target the next line lands on. `python scripts/replay_trace.py GAME` with no
+trace prints the exact recording command for each game it knows.
+
+| Game | CPU | Emulated | Instructions replayed | Interrupts | Result |
+| --- | --- | --- | --- | --- | --- |
+| `dragrace` | MC6800 | 2 s | 368,675 | 483 IRQ (479 out of `WAI`) | **all agree** |
+| `kncljoe` | MC6803 | 10 s | 2,616,010 | 40,050 NMI, 240 IRQ, 8 back-to-back | **all agree** |
+| `kidniki` | MC6803 | 40 s, coin, start and play | 10,544,332 | 160,015 NMI, 544 IRQ, 182 back-to-back | **all agree** |
+
+"Agree" means: registers before every instruction (CC bits 7-6 excepted, the
+one explained difference, see [validation.md](validation.md)), every non-ROM
+read and every write in order, and the cycle total at every line. The MC6801
+instructions seen in real code were `ABX`, `ADDD` (direct), `LDD`, `STD`,
+`PSHX` and `PULX`; **`MUL` and `SUBD` occur in none of these traces**, and are
+covered only by the single-step corpus and the manual-formula tests.
+
+What the replays taught about MAME as a trace source:
+
+- **`-seconds_to_run` takes whole seconds.** `0.05` ran unbounded.
+- **Watch ranges must respect the address mask.** Knuckle Joe's sound map
+  masks the bus to 15 bits, so watching `$8000-$DFFF` as well as
+  `$0000-$5FFF` logged every read twice. Watch each cell once.
+- **MAME can enter two interrupts back to back** with no instruction between
+  them: after `CLI` runs the next instruction inline it takes a pending IRQ,
+  and the next timeslice immediately takes a pending NMI. The log shows two
+  seven-byte frames before the next instruction line, the first frame's
+  pushed PC being the IRQ handler's first address. The replay reads the chain
+  of entries off the frames.
+- **The `WAI` column never shows a wait** (each line is logged before its
+  instruction, and the latch is clear again by the next); see
+  [undocumented-behavior.md](undocumented-behavior.md). Drag Race waits in
+  `12C0: wai` for 479 of its 483 interrupts. MAME idles out the rest of its
+  timeslice in `WAI`, so the replay resynchronises the cycle total at each
+  `WAI` exit and cannot check that exit's cost.
+
 ## Using MAME as an oracle, concretely
 
 The intended comparison is **not** a lockstep of a whole arcade machine. It is:

@@ -212,11 +212,16 @@ re-checks on the next one. For the MC6801 the 4 agrees with the manual
 **`[unresolved: 4 or 5]`** there ([timing.md](timing.md)).
 
 MAME exposes the wait latch as a debugger register, `WAI`
-(`m6800.cpp:550`), which is why the trace scripts in this repository log it: a
-non-zero `WAI` column marks the instruction boundary where the CPU is halted.
-In the three traces taken so far the column is zero throughout, because none
-of those ROMs use `WAI` — so this project has **no trace evidence about `WAI`
-at all** and milestone 1 must build a synthetic case.
+(`m6800.cpp:550`), and the trace scripts log it. **The column is zero on every
+trace line even when the program waits**, because each line is logged before
+its instruction runs and the latch is clear again by the next one. An earlier
+revision of this page read the all-zero column as "none of these ROMs use
+`WAI`"; that was wrong. Drag Race's main loop is `12C0: wai`, and in the
+two-second trace **479 of its 483 IRQs arrive while it waits**, all of them
+replayed through the core by `scripts/replay_trace.py` (the frame is pushed
+once, by `WAI`, and not again at entry). The entry's own cost cannot be read
+off a MAME trace, since MAME idles out the rest of its timeslice first, so the
+6800's 4-or-5 question stays with the manuals.
 
 ## What would settle all of this
 
