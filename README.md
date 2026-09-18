@@ -22,7 +22,7 @@ scripts, and a handoff brief for the session that writes the core.
 | **MC6800** | The 1974 original; external clock, no on-chip RAM | in scope |
 | **MC6802** | Adds an on-chip ÷4 oscillator and 128 bytes of RAM | in scope — **identical instruction set and cycle counts** |
 | **MC6808** | MC6802 without the RAM | in scope — identical |
-| **MC6801 / MC6803** | Superset: the 16-bit **D** accumulator and eleven new mnemonics — `ABX`, `ADDD`, `ASLD`, `BRN`, `LDD`, `LSRD`, `MUL`, `PSHX`, `PULX`, `STD`, `SUBD`, plus `JSR` direct — and **78 shared opcodes that run faster**. The 6801 also carries an on-chip timer, an SCI and four I/O ports | instruction set and cycle counts in scope; **the timer, SCI and ports belong to the host, not the core** |
+| **MC6801 / MC6803** | Superset: the 16-bit **D** accumulator and eleven new mnemonics — `ABX`, `ADDD`, `ASLD`, `BRN`, `LDD`, `LSRD`, `MUL`, `PSHX`, `PULX`, `STD`, `SUBD`, plus `JSR` direct — and **72 shared opcodes that run faster** (three `CPX` forms run slower). The 6801 also carries an on-chip timer, an SCI and four I/O ports | instruction set and cycle counts in scope; **the timer, SCI and ports belong to the host, not the core** |
 | HD6301 / HD63701 / HD6303 | Hitachi supersets: `XGDX`, `SLP`, `AIM`/`OIM`/`EIM`/`TIM`, an illegal-opcode trap through `$FFEE` | **out of scope**, noted |
 | NSC8105 / MS2010-A | An unlicensed clone with a **scrambled opcode map** | **out of scope**, noted |
 | **MC6805**, **MC6809** | Different cores despite the family name; the 6809 is binary-incompatible and has its own repository (`/data/emu/m6809-python`) | **out of scope** |
@@ -110,7 +110,8 @@ the seven-rung plan.
 ```text
 python scripts/fetch_mame_source.py        # MAME 0.285's 6800 core, hash-verified
 python scripts/fetch_reference_docs.py     # the four Motorola scans, hash-verified
-python scripts/dump_mame_tables.py         # regenerate the instruction table
+python scripts/extract_manual_tables.py --markdown  # regenerate the instruction table from the manuals
+python scripts/dump_mame_tables.py         # MAME's view of the same table, as a detector
 scripts/mame_trace.sh dragrace 2 :maincpu  # MC6800 trace; see docs/mame-oracle.md
 scripts/mame_trace.sh kncljoe 10 :soundcpu # MC6803 trace
 M6800_PRESS="IN2:Advance:680:20" \
@@ -126,12 +127,14 @@ and are never copied.
 
 Said plainly, because the next session needs to know:
 
-- **The four Motorola scans were fetched and hash-pinned but not read.** They
-  are image-only and this machine has no PDF rasteriser. Everything presented
-  here as "the manual says" is the emulator-and-community account of what the
-  manual says, and correcting it is milestone 0 of the handoff.
-- Gerry Wheeler's 1977 tables of undocumented opcodes have not been read
-  either; only the bibliographic record and secondary summaries.
+- **Milestone 0 is done (2026-09-18):** M68PRM, M6801RM and MCSDD were read
+  (the scans carry an OCR text layer; poppler-utils reads it), the instruction
+  table is now generated from the manuals by
+  `scripts/extract_manual_tables.py`, and `CPX` and the 12-cycle interrupt
+  entry are settled. See [docs/validation.md](docs/validation.md). APPS has not
+  been read, and the MC6800's `WAI` exit cost (4 or 5) is still unresolved.
+- Gerry Wheeler's 1977 tables of undocumented opcodes have not been read;
+  only the bibliographic record and secondary summaries.
 - No single-step corpus has been generated — there is none to fetch, so one
   must be made.
 

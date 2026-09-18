@@ -38,7 +38,7 @@ REFERENCE = ROOT / "reference"
 # PDF page ranges of Appendix A, found by reading the page headers.
 MANUALS = {
     "M68PRM": ("M68PRM.pdf", range(36, 110)),
-    "M6801RM": ("M6801RM.pdf", range(270, 362)),
+    "M6801RM": ("M6801RM.pdf", range(270, 358)),
 }
 
 FLAG_NAMES = "HINZVC"
@@ -56,6 +56,10 @@ MANUAL_ROWS: dict[tuple[str, int], list[tuple[str, int, int, int]]] = {
     ("M6801RM", 354): [("ACCA", 2, 1, 0x4D), ("ACCB", 2, 1, 0x5D),  # TST, A-87
                        ("EXT", 6, 3, 0x7D), ("IND", 6, 2, 0x6D)],
 }
+
+# Instruction pages that carry no opcode rows by design: DAA's table starts
+# overleaf (M68PRM A-34), and the SWI worked examples (M68PRM A-68, M6801RM A-82).
+NO_ROWS = {("M68PRM", 67), ("M68PRM", 101), ("M6801RM", 349)}
 
 ROW = re.compile(
     r"^\s*(?:(?P<acc>[AB8])\s+)?['`]?(?P<mode>[A-Za-z]{1,8})\s+(?P<cyc>\d{1,2})\s+"
@@ -151,10 +155,16 @@ def extract(manual: str) -> tuple[dict[int, dict], list[str]]:
             rows.append((mode, cyc, nbytes, op, True))
         for mode, cyc, nbytes, op, hex_ok in rows:
             if op in records:
-                problems.append(f"{manual} p{page}: opcode {op:02X} also on p{records[op]['pdf_page']}")
+                # M6801RM gives Motorola's alternate mnemonics their own pages
+                # (BHS = BCC, BLO = BCS, LSL = ASL, LSLD = ASLD); they must agree.
+                first = records[op]
+                if (first["cycles"], first["bytes"], first["flags"]) != (cyc, nbytes, flags):
+                    problems.append(f"{manual} p{page}: opcode {op:02X} disagrees with p{first['pdf_page']}")
+                first.setdefault("aliases", []).append(f"{title} p{page}")
+                continue
             records[op] = {"title": title, "mode": mode, "cycles": cyc, "bytes": nbytes,
                            "flags": flags, "pdf_page": page, "folio": folio, "hex_ocr_ok": hex_ok}
-        if not rows and not re.search(r"Table A|APPENDIX|Nomenclature", " ".join(body[:3])):
+        if not rows and (manual, page) not in NO_ROWS:
             problems.append(f"{manual} p{page} ({folio}) {title}: no opcode rows parsed")
         if rows and flags is None:
             problems.append(f"{manual} p{page} ({folio}) {title}: flag rules not parsed")

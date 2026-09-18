@@ -183,13 +183,16 @@ Two specific claims worth chasing, both `[unverified]` here:
 
 ## Undefined flag results on documented instructions
 
+The "Motorola says" column was checked against the manuals' Appendix A pages on
+2026-09-18 ([start-here.md](start-here.md), `scripts/extract_manual_tables.py`).
+
 | Instruction | Motorola says | MAME does | Tier of MAME's choice |
 | --- | --- | --- | --- |
-| `DAA` `$19` | V **undefined** | clears V. Handler does `CLR_NZV` then sets N, Z and ORs in the new carry, so V is left 0 (`6800ops.hxx:208-220`) | `[MAME only]` |
-| `DAA` | C is "set if the correction produced a carry" | **never cleared** — the handler deliberately keeps the incoming carry and ORs in its own (`/* keep carry from previous operation */`) | matches the manual's intent; still worth a targeted test |
-| `ASL`/`ASLA`/`ASLB`, `NEG`/`NEGA`/`NEGB`, `ASLD` | H **undefined** | the comment column says `?` and the handlers leave H alone | `[MAME only]` for "leaves it alone" |
-| `CPX` on the MC6800 | C unaffected; N and V from the high byte alone (the community account) | one shared handler for 6800 and 6801, so **no difference is modelled** | a real candidate divergence; see [start-here.md](start-here.md) |
-| `LSRD` `$04` (6801) | N ← 0, V ← N ⊻ C | the *comment* says V unaffected (`-0*-*`) but the *code* does `if (NXORC) SEV` (`6800ops.hxx:60-68`) | MAME's comment is stale; follow the code and the manual |
+| `DAA` `$19` | V **"Not defined"** (M68PRM p. A-34, M6801RM p. A-40) | clears V. Handler does `CLR_NZV` then sets N, Z and ORs in the new carry, so V is left 0 (`6800ops.hxx:208-220`) | `[MAME only]` |
+| `DAA` | C by a nine-row table (M68PRM p. A-34): every row with C = 1 before has C = 1 after | **never cleared** — the handler deliberately keeps the incoming carry and ORs in its own (`/* keep carry from previous operation */`); its rule reproduces the manual's table on all 384 BCD cases | **agrees with the manual**; still worth a targeted test |
+| `ASL`/`ASLA`/`ASLB`, `NEG`/`NEGA`/`NEGB`, `ASLD`, and every subtract and compare | H **"Not affected"** (M68PRM pp. A-7, A-31, A-49, A-59, A-66; M6801RM p. A-10) — *not* undefined, as this row used to say | the comment column says `?` but the handlers leave H alone | **agrees with the manual**; only MAME's comments are wrong |
+| **`CPX` on the MC6800** | Z from both bytes; N and V from the high-byte compare alone; **C not affected** (M68PRM p. A-33). The MC6801 is a true 16-bit compare setting all four (M6801RM p. A-39) | one shared handler for both parts: a 16-bit subtract with `SET_FLAGS16`, setting C and 16-bit N and V (`6800ops.hxx:1107`) | **MAME is wrong for the MC6800.** The core follows M68PRM; every 6800 `CPX` case whose C, N or V differ is an expected disagreement with MAME |
+| `LSRD` `$04` (6801) | N ← 0, V ← N ⊻ C (M6801RM p. A-57) | the *comment* says V unaffected (`-0*-*`) but the *code* does `if (NXORC) SEV` (`6800ops.hxx:60-68`) | MAME's comment is stale; its code matches the manual. The same holds for `ASR`, `LSR`, `ROR` (V), `TST` (C cleared) and `MUL` (Z not affected) |
 | Illegal opcodes generally | nothing | 4 cycles (the `XX` sentinel; 5 in MAME 0.261), no flags | `[MAME only]` |
 | Reset | I set; A, B, IX, SP, and the other CC bits **undefined** | `CC = $D0`, A = B = IX = SP = 0 (`m6800.cpp:577-585`) | `[MAME only]`; confirmed in a real run — the first trace line of Drag Race is `1200 0 0 0 0 D0 0 0` |
 
@@ -204,8 +207,9 @@ first `TPA`/`PSH CC`.
 must not push again. MAME charges 4 cycles for that entry rather than 12
 (`m6800.cpp:449-473`). If `I = 1` and only `IRQ` is pending, `WAI` never
 returns; MAME's handler burns the rest of the timeslice (`eat_cycles()`) and
-re-checks on the next one. Whether a real part's `WAI` exit costs 4 cycles is
-`[unverified]` — it comes from MAME, not from MCSDD's bus table.
+re-checks on the next one. For the MC6801 the 4 agrees with the manual
+(M6801RM §5.4.2); for the MC6800, MCSDD's Figure 14 reads as 5, so it is
+**`[unresolved: 4 or 5]`** there ([timing.md](timing.md)).
 
 MAME exposes the wait latch as a debugger register, `WAI`
 (`m6800.cpp:550`), which is why the trace scripts in this repository log it: a
