@@ -50,8 +50,9 @@ and Doc TB (2019) measured on real MC6800s; `undocumented="mame"` gives MAME
 | 5. Independent emulators | sim68xx, n6800 RTL (detectors) | sim68xx: 195,617 of 197,000 agree three ways, every other case sim68xx alone off; n6800: 173 of 197 opcodes agree on every case including cycles and bus order; each remaining difference settled by the manual in the core's favour |
 | 6. The undocumented set | measured on silicon (1977, 2019) | both sources read; HCF family halts; Wheeler's `$14` and store-immediate forms and Doc TB's `$15` under `undocumented="measured"`; MAME disagrees on the store-immediates |
 
-`python -m pytest` runs rungs 1 and 2 (2 only when the gitignored corpus has
-been generated). Details, and every command: [docs/validation.md](docs/validation.md).
+`python -m pytest` runs rungs 1, 2 and 6 (2 only when the gitignored corpus
+has been generated); `python -m pytest -m slow` replays the MAME traces and
+the Williams board of rungs 3 and 4, where they have been recorded locally. Details, and every command: [docs/validation.md](docs/validation.md).
 
 ## Scope
 
