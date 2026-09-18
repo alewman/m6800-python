@@ -21,10 +21,9 @@ class InterruptMixin:
     #: (MCSDD Figure 13, MC6800; M6801RM section 5.3 and Figure 5-12).
     INTERRUPT_ENTRY_CYCLES = 12
 
-    #: The same, when WAI has already stacked the frame.  4 on the MC6801
-    #: (M6801RM section 5.4.2).  On the MC6800 it is UNRESOLVED: MCSDD's
-    #: Figure 14 reads as 5, MAME charges 4 (docs/timing.md).  M6800 keeps
-    #: MAME's 4 until a better source settles it; change it here only.
+    #: The same, when WAI has already stacked the frame: "Four MPU cycles are
+    #: required to start the interrupt sequence after a WAI instruction"
+    #: (APPS p. A-14, Q20, MC6800); 4 on the MC6801 too (M6801RM section 5.4.2).
     WAI_EXIT_CYCLES = 4
 
     def _enter_interrupt(self, vector: int) -> int:
@@ -56,13 +55,22 @@ class InterruptMixin:
         self._nmi_previous = self.nmi
         self.PC = self._read_word(VECTOR_RESET)
 
+    #: MC6800 only: whether CLI holds off a pending IRQ depends on the opcode
+    #: that preceded it (APPS p. A-13, Q15).  The MC6801 always holds it off.
+    _CLI_DELAY_NEEDS_ODD_OPCODE = True
+
     def _op_cli(self) -> None:
         """CLI -- I <- 0 (M68PRM p. A-28)."""
-        # "Assuming the I-bit is not already clear ... the instruction following
-        # CLI will always be executed prior to servicing any maskable
-        # interrupt" (M6801RM section 5.4.1.1).  M68PRM states no such rule for
-        # the MC6800; its section 3.3.8 look-ahead has the same effect.
-        if self.CC & I:
+        # MC6800: "If the opcode of the instruction immediately preceding the
+        # CLI instruction has a zero in its least significant bit position, a
+        # pending interrupt will be recognized as soon as execution of CLI is
+        # complete.  If there was a one ... the instruction following the CLI
+        # will be executed before the pending interrupt is recognized" (APPS,
+        # p. A-13, Q15 -- hence Motorola's advice to write NOP; CLI; WAI).
+        # MC6801: "assuming the I-bit is not already clear ... the instruction
+        # following CLI will always be executed prior to servicing any
+        # maskable interrupt" (M6801RM section 5.4.1.1).
+        if self.CC & I and (not self._CLI_DELAY_NEEDS_ODD_OPCODE or self._previous_opcode & 1):
             self._irq_inhibit = True
         self.CC &= ~I
 

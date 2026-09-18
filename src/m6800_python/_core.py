@@ -49,6 +49,11 @@ class CoreMixin:
         self.waiting = False
         # HCF ($9D/$DD on the MC6800) has run; only reset() leaves this state.
         self.halted = False
+        # The last two opcodes executed: the MC6800's CLI looks at the one
+        # before it (_interrupts.py).  After reset nothing is known; assume an
+        # odd opcode, so a CLI first thing keeps the one-instruction delay.
+        self._opcode = 0x01
+        self._previous_opcode = 0x01
 
     # -- fetch -------------------------------------------------------------
 
