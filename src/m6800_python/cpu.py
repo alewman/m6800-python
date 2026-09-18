@@ -14,7 +14,7 @@ from m6800_python._interrupts import VECTOR_IRQ, VECTOR_NMI, InterruptMixin
 from m6800_python._loads import LoadMixin
 from m6800_python._shifts import ShiftMixin
 from m6800_python._stack import StackMixin
-from m6800_python._undocumented import mame_entry, strict_entry
+from m6800_python._undocumented import POLICIES, policy_entry
 
 
 class M6800(
@@ -40,25 +40,31 @@ class M6800(
     instruction boundaries.  ``waiting`` is True inside WAI, ``halted`` after
     HCF.
 
-    ``mame_compat=True`` makes the opcodes Motorola does not assign behave as
-    MAME 0.285 makes them behave, for trace comparison; see _undocumented.py.
+    ``undocumented`` chooses what the opcodes Motorola does not assign do:
+    ``"strict"`` (the default) halts on the HCF family and raises
+    :class:`UndocumentedOpcode` on the rest; ``"measured"`` adds the
+    behaviours Wheeler (1977) and Doc TB (2019) observed on real MC6800s;
+    ``"mame"`` reproduces MAME 0.285, for trace comparison.  See
+    _undocumented.py for each behaviour and its source.
     """
 
     PART = 6800
-    _tables: dict[bool, list[Entry]]
+    _tables: dict[str, list[Entry]]
 
     def __init__(
-        self, read_byte: ReadByte, write_byte: WriteByte, *, mame_compat: bool = False
+        self, read_byte: ReadByte, write_byte: WriteByte, *, undocumented: str = "strict"
     ) -> None:
         self._init_core(read_byte, write_byte)
-        self.mame_compat = mame_compat
         cls = type(self)
         if "_tables" not in cls.__dict__:
             cls._tables = {
-                False: build_table(cls, cls.PART, strict_entry(cls, cls.PART)),
-                True: build_table(cls, cls.PART, mame_entry(cls, cls.PART)),
+                policy: build_table(cls, cls.PART, policy_entry(cls, cls.PART, policy))
+                for policy in POLICIES
             }
-        self._table = cls._tables[mame_compat]
+        if undocumented not in cls._tables:
+            raise ValueError(f"undocumented= must be one of {POLICIES}, not {undocumented!r}")
+        self.undocumented = undocumented
+        self._table = cls._tables[undocumented]
 
     def pulse_nmi(self) -> None:
         """Latch an NMI edge, to be taken at the next instruction boundary."""
@@ -121,9 +127,9 @@ class M6803(M6800):
     _CPX_SETS_CARRY = True
 
     def __init__(
-        self, read_byte: ReadByte, write_byte: WriteByte, *, mame_compat: bool = False
+        self, read_byte: ReadByte, write_byte: WriteByte, *, undocumented: str = "strict"
     ) -> None:
-        super().__init__(read_byte, write_byte, mame_compat=mame_compat)
+        super().__init__(read_byte, write_byte, undocumented=undocumented)
         self.irq2: int | None = None
 
     @property
