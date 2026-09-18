@@ -65,8 +65,8 @@ validation plan in order.
 manuals"). The scans turned out to carry an OCR text layer, and with
 poppler-utils installed `scripts/extract_manual_tables.py` reads both Appendix
 A's. `CPX` is settled (MAME models both parts correctly) and interrupt entry is 12
-cycles on both parts. One piece remains open: the MC6800's `WAI` exit, 4 or 5
-cycles. The original instructions follow.
+cycles on both parts; the MC6800's `WAI` exit (4) was settled later from
+APPS p. A-14. The original instructions follow.
 
 `python scripts/fetch_reference_docs.py` puts four hash-pinned bitsavers scans
 in `reference/`. The session that wrote this brief could not read them (no PDF

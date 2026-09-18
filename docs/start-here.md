@@ -446,12 +446,20 @@ seven, and CC goes `$C8 → $D0` — I set, the rest preserved.
   interrupt"; `SEI` "is not delayed"; `TAP` always lets the next instruction
   run, even another `TAP`; and after `RTI` the delay "is absorbed by the
   remaining cycles of the instruction", so an `IRQ` still pending is taken
-  straight after `RTI`. M68PRM states no such rule for the MC6800; its
-  §3.3.8 "Look-Ahead Feature" (p. 3-7) says only that an interrupt arriving
-  during the last cycle of an instruction is held until the *next*
-  instruction completes, which has the same effect for `CLI`. The 6800
-  behaviour is therefore **inferred, not stated**. MAME 0.285 encodes the
-  6801 rules literally: `cli` executes the next opcode
+  straight after `RTI`. **The MC6800's `CLI` is different**, and Motorola says
+  so in APPS (the *M6800 Microprocessor Applications Manual*, p. A-13, Q15):
+  "If the opcode of the instruction immediately preceding the CLI instruction
+  has a zero in its least significant bit position, a pending interrupt will
+  be recognized as soon as execution of CLI is complete. If there was a one
+  in the least significant bit position of the previous instruction's opcode,
+  the instruction following the CLI will be executed before the pending
+  interrupt is recognized" — which is why the manual tells programmers to
+  write `NOP; CLI; WAI`. The core follows it on `M6800` and the M6801RM rule
+  on `M6803`. APPS agrees about `RTI` (p. A-12, Q12: the `IRQ` "will be
+  serviced prior to the instruction" after it) and says nothing about a
+  `TAP` delay on the MC6800, so the core applies the 6801's `TAP` rule there,
+  **inferred**. MAME 0.285 encodes the 6801 rules for both parts, so on an
+  MC6800 after an even opcode it delays an `IRQ` the part would take at once: `cli` executes the next opcode
   inline via `execute_one()` **only if I was actually set** before the `CLI`,
   then checks the lines; `tap` always does, with the comment "TAP temporarily
   sets the I flag and blocks IRQ until the next opcode (if the next opcode is
@@ -480,19 +488,14 @@ the stacking has already happened. Consequences a core must model:
 - The frame is on the stack *before* the wait, so an interrupt taken out of
   `WAI` must **not** push again. MAME's `enter_interrupt` charges 4 cycles in
   the `WAI` case and 12 otherwise (`m6800.cpp:449-473`).
-- **On the 6801 the 4 agrees with the manual.** M6801RM §5.4.2 (pp. 5-19 to 5-21,
-  Figure 5-15 on p. 5-20) gives five cycles from `NMI` to the routine's first
-  fetch out of `WAI` and six for `IRQ1`; on the accounting that makes the
-  ordinary case 13 = 1 + 12 and 14 = 2 + 12, that is 4 cycles of sequence.
-- **On the 6800 it may be 5.** MCSDD's Figure 14 "Wait Instruction Timing"
-  (printed p. 18) draws three cycles after the wake-up before the two vector
-  reads, one more than the 6801's figure, and the 6800 has a reason the 6801
-  lacks: it floats its buses during `WAI` (Bus Available high) and must take
-  them back, whereas "contrary to the MC6800, none of the ports are driven to
-  the high impedance state by a WAI instruction" on the 6801 (M6801RM
-  §5.4.2). This is a reading of a timing diagram, not a table, so it stays
-  **`[unresolved: 4 or 5]`** for the MC6800 and is carried in
-  [timing.md](timing.md).
+- **The 4 is Motorola's on both parts.** MC6800: "Four MPU cycles are
+  required to start the interrupt sequence after a WAI instruction" (APPS
+  p. A-14, Q20). MC6801: M6801RM §5.4.2 (pp. 5-19 to 5-21, Figure 5-15)
+  gives five cycles from `NMI` to the routine's first fetch out of `WAI` and
+  six for `IRQ1`, which on the accounting that makes the ordinary case
+  13 = 1 + 12 is 4 cycles of sequence. (Before APPS was read, this page
+  guessed 5 for the MC6800 from MCSDD's Figure 14; the manual's own answer is
+  4.)
 - If I = 1 and only `IRQ` is pending, `WAI` waits forever (until `NMI` or
   reset). MAME's `wai` handler calls `check_irq_lines()` immediately and, if
   still waiting, `eat_cycles()` — it burns the rest of the timeslice

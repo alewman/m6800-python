@@ -263,9 +263,8 @@ first `TPA`/`PSH CC`.
 must not push again. MAME charges 4 cycles for that entry rather than 12
 (`m6800.cpp:449-473`). If `I = 1` and only `IRQ` is pending, `WAI` never
 returns; MAME's handler burns the rest of the timeslice (`eat_cycles()`) and
-re-checks on the next one. For the MC6801 the 4 agrees with the manual
-(M6801RM §5.4.2); for the MC6800, MCSDD's Figure 14 reads as 5, so it is
-**`[unresolved: 4 or 5]`** there ([timing.md](timing.md)).
+re-checks on the next one. The 4 is Motorola's for both parts (APPS p. A-14,
+Q20; M6801RM §5.4.2; [timing.md](timing.md)).
 
 MAME exposes the wait latch as a debugger register, `WAI`
 (`m6800.cpp:550`), and the trace scripts log it. **The column is zero on every
@@ -276,8 +275,8 @@ revision of this page read the all-zero column as "none of these ROMs use
 two-second trace **479 of its 483 IRQs arrive while it waits**, all of them
 replayed through the core by `scripts/replay_trace.py` (the frame is pushed
 once, by `WAI`, and not again at entry). The entry's own cost cannot be read
-off a MAME trace, since MAME idles out the rest of its timeslice first, so the
-6800's 4-or-5 question stays with the manuals.
+off a MAME trace, since MAME idles out the rest of its timeslice first; APPS
+gives it (4).
 
 ## What would settle all of this
 

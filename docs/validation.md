@@ -162,17 +162,21 @@ pages rendered with `pdftoppm`. What was done with them:
   was wrong for the 6800; it had looked only at the 6801's handler table.
 - **Interrupt entry is 12 cycles** on both parts: MCSDD's MC6800 data sheet,
   Figure 13, and M6801RM §5.3 / Figure 5-12. The quoted 13 is a response
-  time (one recognition cycle plus 12). Out of `WAI`, 4 on the 6801
-  (M6801RM §5.4.2); on the 6800 MCSDD Figure 14 reads as 5, so that one stays
-  **`[unresolved: 4 or 5]`**.
+  time (one recognition cycle plus 12). Out of `WAI`, **4 on both parts**:
+  APPS p. A-14, Q20 for the MC6800 ("four MPU cycles"), M6801RM §5.4.2 for
+  the 6801. (Settled when APPS was read; MCSDD's Figure 14 had been read as 5.)
 - `DAA`'s rule reproduces M68PRM's nine-row table on all 384 BCD cases, and
   its V is "not defined" in both manuals.
 - The `CLI`/`SEI`/`TAP`/`RTI` interrupt-delay rules are stated in M6801RM
-  §5.4.1 and match MAME 0.285; M68PRM states no such rule for the MC6800
-  (only §3.3.8's look-ahead), so the 6800 behaviour is marked inferred.
+  §5.4.1 and match MAME 0.285 for the 6801. For the MC6800, APPS p. A-13,
+  Q15 gives a different `CLI` rule — the delay happens only when the opcode
+  before the `CLI` is odd — which the core implements on `M6800` and MAME does
+  not; APPS Q12 agrees on `RTI`; the 6800's `TAP` delay stays inferred.
 
-APPS (the applications manual) was not needed for any of this and has **not**
-been read; it is extracted and searchable when something calls for it.
+APPS (the applications manual) was searched for interrupt timing on
+2026-09-18; its questions-and-answers appendix (pp. A-10 to A-14) settled the
+MC6800's `WAI` exit and `CLI` rule and documents the in-instruction races in
+[timing.md](timing.md). The rest of its 712 pages has not been read.
 
 ### MAME 0.285 — emulator-derived, the working detector
 
@@ -364,7 +368,8 @@ states as the core:
   A-75); `WAI` leaves SP one byte short of the seven it pushes (p. A-76); and
   `DAA` sets V in 473 cases, where both manuals say V is not defined.
 
-**Open, carried forward:** the MC6800's `WAI`-exit cost (4 or 5); HCF's bus
+**Open, carried forward:** the MC6800's `TAP` delay (inferred from the
+6801's); HCF's bus
 activity (not modelled); what a real part does with the ~50 unassigned opcodes
 neither source describes; the dummy reads, if a host ever needs them;
 `LSRD`/`ASLD` in real code.
