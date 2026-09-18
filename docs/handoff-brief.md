@@ -91,7 +91,11 @@ The two questions that must not survive this milestone:
   cycle-by-cycle instruction-execution table decides. The same question
   applies to the 4 cycles MAME charges for an interrupt taken out of `WAI`.
 
-### Milestone 1 — skeleton and the datasheet table
+### Milestone 1 — skeleton and the datasheet table ✅ done 2026-09-18
+
+**Status:** `src/m6800_python`, 830 tests; see `docs/validation.md`, "The
+record so far".
+
 
 Registers, CC with bits 7 and 6 pinned to 1, all six addressing modes
 (remember the **unsigned** indexed offset), the dispatch table, and every
@@ -104,7 +108,12 @@ documented instruction with its Motorola mnemonic first in its docstring.
   and a readability test enforcing "one mnemonic per handler docstring" the
   way `z80-python`'s does.
 
-### Milestone 2 — generate a single-step corpus from MAME
+### Milestone 2 — generate a single-step corpus from MAME ✅ done 2026-09-18
+
+**Status:** `scripts/mame_corpus.py` and `scripts/compare_mame_corpus.py`;
+512,000 cases, 0 unexplained disagreements (the only differences are CC bits
+7-6 after `TAP`/`RTI`).
+
 
 Nothing is fetchable for this CPU. Build what the 6809 project could download:
 a generator that drives MAME's `m6800`/`m6801` core over random initial states
@@ -123,7 +132,14 @@ standalone.
   `DAA`'s V, `CPX` if milestone 0 finds MAME wrong. **Do not change the core
   to match MAME where the manual disagrees.**
 
-### Milestone 3 — MAME boot-segment replay
+### Milestone 3 — MAME boot-segment replay ✅ done 2026-09-18, one gap
+
+**Status:** `scripts/replay_trace.py` replays whole watchpoint-logged traces,
+not just the boot segment: Drag Race 368,675, Knuckle Joe 2,616,010 and Kid
+Niki 10,544,332 instructions, all agreeing. **Gap:** no available trace
+executes `MUL` or `SUBD` (Kid Niki supplies the `ADDD`); those two rest on the
+rung 1 and rung 2 tests.
+
 
 `scripts/mame_trace.sh dragrace 2 :maincpu` (3.2 s wall, 368,676 instruction
 lines, 483 IRQ entries at `$15C7`) and `scripts/mame_trace.sh kncljoe 10

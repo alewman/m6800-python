@@ -227,12 +227,66 @@ reorder them; each one's failure is cheapest to diagnose before the next.
 | Step | Gate | Judge or detector | Claim earned |
 | --- | --- | --- | --- |
 | 0 ✅ | **Read the four scans** (done 2026-09-18; results above). Correct [start-here.md](start-here.md) and [timing.md](timing.md) from M68PRM Appendix A, MCSDD's instruction-execution tables and M6801RM Appendix A. Settle `CPX`'s flags and the interrupt-entry cycle count | datasheet, **judge** | the table this project tests against is Motorola's, not MAME's |
-| 1 | Per-opcode unit tests transcribed from the corrected table: bytes, cycles, flags, for both `M6800` and `M6803` classes; plus `PSHX`/`PULX` order, `RTI` with both stack contents, `WAI`, `SWI`, and the three interrupt entries | datasheet, **judge** | documented semantics and counts as Motorola states them |
-| 2 | **Generate** a single-step corpus from MAME, the way `neetandev/m6809` was generated for the 6809, and run all 256 opcodes × N random states through it, comparing registers, memory and cycle count | MAME, detector | agreement with MAME on every documented opcode; every disagreement listed with the higher-tier source the core follows instead |
-| 3 | Boot-segment replay of `dragrace` (`scripts/mame_trace.sh dragrace 2 :maincpu`, 368,676 lines, 483 IRQ entries) and of `kncljoe`'s 6803 sound CPU, comparing `curpc a b x s cc` and `totalcycles` deltas per line, special-casing `CLI`/`TAP` | MAME, detector | hundreds of thousands of instructions of real arcade code agree, on both parts |
+| 1 ✅ | Per-opcode unit tests transcribed from the corrected table: bytes, cycles, flags, for both `M6800` and `M6803` classes; plus `PSHX`/`PULX` order, `RTI` with both stack contents, `WAI`, `SWI`, and the three interrupt entries | datasheet, **judge** | documented semantics and counts as Motorola states them |
+| 2 ✅ | **Generate** a single-step corpus from MAME, the way `neetandev/m6809` was generated for the 6809, and run all 256 opcodes × N random states through it, comparing registers, memory and cycle count | MAME, detector | agreement with MAME on every documented opcode; every disagreement listed with the higher-tier source the core follows instead |
+| 3 ✅ | Boot-segment replay of `dragrace` (`scripts/mame_trace.sh dragrace 2 :maincpu`, 368,676 lines, 483 IRQ entries) and of `kncljoe`'s 6803 sound CPU, comparing `curpc a b x s cc` and `totalcycles` deltas per line, special-casing `CLI`/`TAP` | MAME, detector | hundreds of thousands of instructions of real arcade code agree, on both parts |
 | 4 | Williams sound-board host: memory map, one PIA with CB1 edge detection, an IRQ line, a DAC sink; drive it from the Robotron trace's command stream | MAME, detector | the 6808 runs a real sound ROM under a real host contract |
 | 5 | Cross-check against **sim68xx** and **shdl6800** on the step-2 cases; three-way diff | independent emulators, detectors | every rule in the core is datasheet-backed or agreed by three independent implementations, and shdl6800's RTL gives a second opinion on cycle counts |
 | 6 | The undocumented set: HCF as a halt state, and the Wheeler table once the *BYTE* article has been read | hardware-captured (HCF), secondary (the rest) | the two opcodes anyone has measured behave correctly; everything else stays explicitly `[unverified]` |
+
+## The record so far (2026-09-18)
+
+Rungs 0 to 3 pass. Every number below was produced by the command beside it,
+on CPython 3.14.4.
+
+**Rung 1 — the manuals (tier: datasheet, the judge).** `pytest` runs 830
+tests for this rung, and 2 more for rung 2 when the corpus exists; about 7 s in
+all. `tests/test_datasheet.py` checks all 197 MC6800 and 220
+MC6803 opcodes from 40 random states each against `tests/datasheet.py` (cycles,
+length, every flag the manual marks `-`, `0` or `1`); `tests/test_alu.py`
+checks the `*` flags bit by bit against the manuals' printed Boolean formulae,
+exhaustively for the 8-bit arithmetic, logic, single-operand and shift
+instructions and for `MUL`; `tests/test_daa.py` covers all 1,024 `DAA` inputs
+(the 384 the manual's table defines against the table) and every BCD addition;
+`tests/test_cpx.py`, `tests/test_control.py` and `tests/test_interrupts.py`
+cover the parts' `CPX` rules, the worked examples on M68PRM's `SWI`, `RTI`,
+`JSR` and `RTS` pages, and the M6801RM section 5.4.1 interrupt-timing loops.
+
+**Rung 2 — generated MAME corpus (tier: emulator-derived, a detector).**
+`python scripts/mame_corpus.py generate` builds MAME 0.285's own 6800 handlers
+from the pinned sources and writes 1,000 random-state cases for each of the
+256 opcodes of each part; `python scripts/compare_mame_corpus.py` replays
+them, comparing registers, memory, cycles and the exact bus access sequence.
+
+| Part | Cases | Exact agreement | Explained differences | Unexplained |
+| --- | --- | --- | --- | --- |
+| MC6800 | 256,000 | 254,507 | 1,493 (`TAP` 750, `RTI` 743) | 0 |
+| MC6803 | 256,000 | 254,467 | 1,533 (`TAP` 775, `RTI` 758) | 0 |
+
+The explained differences are all one fact: after `TAP` or `RTI` the core
+keeps CC bits 7-6 at 1, as the manuals do (M68PRM pp. A-67, A-70, A-72,
+A-76), while MAME stores all eight bits. The undocumented opcodes agree
+because the comparison runs with `mame_compat=True`; that is agreement with
+MAME's guess, not evidence about silicon.
+
+**Rung 3 — real arcade code against MAME (tier: emulator-derived).**
+`python scripts/replay_trace.py GAME` replays a watchpoint-logged MAME trace
+(method and gotchas in [mame-oracle.md](mame-oracle.md)): registers before
+every instruction, every non-ROM read and every write in order, the running
+cycle total, and every interrupt entry.
+
+| Game | CPU | Instructions | Interrupts replayed | Result |
+| --- | --- | --- | --- | --- |
+| `dragrace` | MC6800 | 368,675 | 483 IRQ, 479 of them out of `WAI` | all agree |
+| `kncljoe` | MC6803 | 2,616,010 | 40,050 NMI, 240 IRQ, 8 back-to-back | all agree |
+| `kidniki` | MC6803 | 10,544,332 | 160,015 NMI, 544 IRQ, 182 back-to-back | all agree |
+
+Drag Race executes one undocumented opcode, `$02` at `$1230`; it replays
+only because `mame_compat=True` gives it MAME's behaviour. `MUL` and `SUBD`
+occur in none of the traces.
+
+**Open, carried forward:** the MC6800's `WAI`-exit cost (4 or 5); what a real
+part does with every unassigned opcode but HCF; rungs 4 to 6.
 
 ### What would raise the ceiling
 

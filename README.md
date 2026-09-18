@@ -1,19 +1,53 @@
 # m6800-python
 
-**Status: documents and oracles only. There is no core code yet.**
+**Status (2026-09-18): the core exists and passes rungs 0 to 3 of the
+validation ladder** — the Motorola manuals, a generated MAME corpus, and
+13.5 million instructions of real arcade code replayed against MAME. It is
+checked against the manuals and against MAME; **nothing here has been
+verified against silicon, because for this family nothing can be** (see
+"Oracles" below). Rungs 4 to 6 are still to do.
 
-`m6800-python` will be a readable, dependency-free Python 3.12+ instruction
-core for the Motorola **6800 family** — MC6800, MC6802 and MC6808, which share
-one instruction set, and the MC6801/MC6803 superset — built to the same
-embedding contract as [z80-python](https://github.com/alewman/z80-python) and
+`m6800-python` is a readable, dependency-free Python 3.12+ instruction core
+for the Motorola **6800 family** — MC6800, MC6802 and MC6808, which share one
+instruction set, and the MC6801/MC6803 superset — built to the same embedding
+contract as [z80-python](https://github.com/alewman/z80-python) and
 6502-python: the host owns memory and I/O and supplies `read_byte` /
 `write_byte`; the core owns registers, flags and the instruction-boundary
 lifecycle (RESET, NMI, IRQ, SWI, WAI); `step()` executes one instruction or one
 interrupt entry and returns its cycle count; the host schedules everything
-else. This repository is the groundwork: the primer with the complete
-instruction table, the timing and host notes, the undocumented-behaviour
-record, the oracle inventory with its tiers and pins, the fetch and trace
-scripts, and a handoff brief for the session that writes the core.
+else.
+
+```python
+from m6800_python import M6800, M6803   # also M6802, M6808 (= M6800), M6801 (= M6803)
+
+memory = bytearray(0x10000)
+cpu = M6800(memory.__getitem__, memory.__setitem__)
+cpu.reset()                      # I set, PC from $FFFE
+cycles = cpu.step()              # one instruction or one interrupt entry
+cpu.irq = True                   # level-sensitive; cpu.nmi is edge-triggered
+print(cpu.A, cpu.B, cpu.X, cpu.SP, cpu.PC, cpu.CC)
+```
+
+Every handler is one Motorola mnemonic with its manual page in its docstring;
+the opcode map and both parts' cycle tables come from the manuals' Appendix A.
+An opcode Motorola does not assign raises `UndocumentedOpcode` rather than
+guessing, except HCF (`$9D`/`$DD` on the MC6800), which halts until reset;
+`mame_compat=True` gives MAME 0.285's behaviour instead, for trace replay.
+
+## Where it stands
+
+| Rung | Judge or detector | Result |
+| --- | --- | --- |
+| 0. Read the manuals | datasheet (judge) | done: 197 + 220 opcodes extracted from Appendix A; `CPX` and the 12-cycle interrupt entry settled; the MC6800's `WAI` exit (4 or 5) still open |
+| 1. Per-opcode tests from the manuals | datasheet (judge) | 830 tests pass: every opcode's cycles, length and stated flags; `*` flags against the manuals' Boolean formulae, exhaustive for 8-bit operations; all 1,024 `DAA` inputs |
+| 2. Generated MAME single-step corpus | MAME (detector) | 512,000 cases: 508,974 exact; the other 3,026 differ only in CC bits 7-6 after `TAP`/`RTI`, where the core follows the manual; 0 unexplained |
+| 3. Real code replayed against MAME | MAME (detector) | Drag Race (MC6800) 368,675 instructions, Knuckle Joe and Kid Niki (MC6803) 2,616,010 and 10,544,332: every register, bus access, cycle total and interrupt entry agrees |
+| 4. Williams sound board host | MAME (detector) | not started |
+| 5. sim68xx / shdl6800 three-way diff | independent emulators | not started |
+| 6. The undocumented set | hardware (HCF), secondary | HCF halts until reset; Wheeler's article unread |
+
+`python -m pytest` runs rungs 1 and 2 (2 only when the gitignored corpus has
+been generated). Details, and every command: [docs/validation.md](docs/validation.md).
 
 ## Scope
 
@@ -127,16 +161,20 @@ and are never copied.
 
 Said plainly, because the next session needs to know:
 
-- **Milestone 0 is done (2026-09-18):** M68PRM, M6801RM and MCSDD were read
-  (the scans carry an OCR text layer; poppler-utils reads it), the instruction
-  table is now generated from the manuals by
-  `scripts/extract_manual_tables.py`, and `CPX` and the 12-cycle interrupt
-  entry are settled. See [docs/validation.md](docs/validation.md). APPS has not
-  been read, and the MC6800's `WAI` exit cost (4 or 5) is still unresolved.
-- Gerry Wheeler's 1977 tables of undocumented opcodes have not been read;
-  only the bibliographic record and secondary summaries.
-- No single-step corpus has been generated — there is none to fetch, so one
-  must be made.
+- **Not verified against silicon.** No hardware-tier oracle exists for this
+  family beyond HCF; every result above is agreement with the manuals or with
+  MAME, and is labelled as such.
+- **Rungs 4 to 6 are not done**: no Williams sound-board host yet, no
+  sim68xx/shdl6800 cross-check, and Gerry Wheeler's 1977 tables of
+  undocumented opcodes have not been read (only the bibliographic record and
+  secondary summaries).
+- **Open questions carried forward:** the MC6800's `WAI`-exit cost (4 or 5
+  cycles; the core uses 4 from one constant); what a real part does with every
+  unassigned opcode but HCF; HCF's bus activity during the halt.
+- `MUL` and `SUBD` do not occur in any replayed trace; they are covered by the
+  manual-formula tests and the MAME corpus only.
+- APPS, the fourth manual, has not been read.
+- No PyPy run yet; the core has only been timed on CPython 3.14.
 
 ## License
 
