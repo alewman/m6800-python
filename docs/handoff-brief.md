@@ -93,7 +93,7 @@ The two questions that must not survive this milestone:
 
 ### Milestone 1 — skeleton and the datasheet table ✅ done 2026-09-18
 
-**Status:** `src/m6800_python`, 830 tests; see `docs/validation.md`, "The
+**Status:** `src/m6800_python`, 847 tests with rung 6; see `docs/validation.md`, "The
 record so far".
 
 
@@ -177,7 +177,14 @@ run the milestone-2 cases through both.
   cycle behaviour is compared against the table specifically, since it is the
   only RTL opinion available.
 
-### Milestone 6 — the undocumented set
+### Milestone 6 — the undocumented set ✅ done 2026-09-18
+
+**Status:** Wheeler's article and Doc TB's are both read; every opcode they
+characterise is implemented under `undocumented="measured"` with its citation,
+the HCF family halts under the default policy, MAME's behaviour sits behind
+`undocumented="mame"`, and the rest raise. See the table at the top of
+`docs/undocumented-behavior.md`. HCF's bus activity is described, not modelled.
+
 
 Implement HCF (`$9D`, `$DD`) as a halt that only `reset()` clears — **not**
 MAME's `JSR`. Then read Gerry Wheeler's "Undocumented M6800 Instructions",

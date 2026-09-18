@@ -31,20 +31,22 @@ print(cpu.A, cpu.B, cpu.X, cpu.SP, cpu.PC, cpu.CC)
 Every handler is one Motorola mnemonic with its manual page in its docstring;
 the opcode map and both parts' cycle tables come from the manuals' Appendix A.
 An opcode Motorola does not assign raises `UndocumentedOpcode` rather than
-guessing, except HCF (`$9D`/`$DD` on the MC6800), which halts until reset;
-`mame_compat=True` gives MAME 0.285's behaviour instead, for trace replay.
+guessing, except the HCF family (`$9D $DD $FD $CD $ED` on the MC6800), which
+halts until reset. `undocumented="measured"` adds what Wheeler (*BYTE*, 1977)
+and Doc TB (2019) measured on real MC6800s; `undocumented="mame"` gives MAME
+0.285's behaviour instead, for trace replay.
 
 ## Where it stands
 
 | Rung | Judge or detector | Result |
 | --- | --- | --- |
 | 0. Read the manuals | datasheet (judge) | done: 197 + 220 opcodes extracted from Appendix A; `CPX` and the 12-cycle interrupt entry settled; the MC6800's `WAI` exit (4 or 5) still open |
-| 1. Per-opcode tests from the manuals | datasheet (judge) | 830 tests pass: every opcode's cycles, length and stated flags; `*` flags against the manuals' Boolean formulae, exhaustive for 8-bit operations; all 1,024 `DAA` inputs |
+| 1. Per-opcode tests from the manuals | datasheet (judge) | 847 tests pass: every opcode's cycles, length and stated flags; `*` flags against the manuals' Boolean formulae, exhaustive for 8-bit operations; all 1,024 `DAA` inputs |
 | 2. Generated MAME single-step corpus | MAME (detector) | 512,000 cases: 508,974 exact; the other 3,026 differ only in CC bits 7-6 after `TAP`/`RTI`, where the core follows the manual; 0 unexplained |
 | 3. Real code replayed against MAME | MAME (detector) | Drag Race (MC6800) 368,675 instructions, Knuckle Joe and Kid Niki (MC6803) 2,616,010 and 10,544,332: every register, bus access, cycle total and interrupt entry agrees |
 | 4. Williams sound board host | MAME (detector) | not started |
 | 5. sim68xx / shdl6800 three-way diff | independent emulators | not started |
-| 6. The undocumented set | hardware (HCF), secondary | HCF halts until reset; Wheeler's article unread |
+| 6. The undocumented set | measured on silicon (1977, 2019) | both sources read; HCF family halts; Wheeler's `$14` and store-immediate forms and Doc TB's `$15` under `undocumented="measured"`; MAME disagrees on the store-immediates |
 
 `python -m pytest` runs rungs 1 and 2 (2 only when the gitignored corpus has
 been generated). Details, and every command: [docs/validation.md](docs/validation.md).
@@ -164,13 +166,12 @@ Said plainly, because the next session needs to know:
 - **Not verified against silicon.** No hardware-tier oracle exists for this
   family beyond HCF; every result above is agreement with the manuals or with
   MAME, and is labelled as such.
-- **Rungs 4 to 6 are not done**: no Williams sound-board host yet, no
-  sim68xx/shdl6800 cross-check, and Gerry Wheeler's 1977 tables of
-  undocumented opcodes have not been read (only the bibliographic record and
-  secondary summaries).
+- **Rungs 4 and 5 are not done**: no Williams sound-board host yet, no
+  sim68xx/shdl6800 cross-check.
 - **Open questions carried forward:** the MC6800's `WAI`-exit cost (4 or 5
-  cycles; the core uses 4 from one constant); what a real part does with every
-  unassigned opcode but HCF; HCF's bus activity during the halt.
+  cycles; the core uses 4 from one constant); what a real part does with the
+  ~50 unassigned opcodes neither measurement describes; HCF's bus activity
+  during the halt (not modelled); the cycle counts of Wheeler's instructions.
 - `MUL` and `SUBD` do not occur in any replayed trace; they are covered by the
   manual-formula tests and the MAME corpus only.
 - APPS, the fourth manual, has not been read.

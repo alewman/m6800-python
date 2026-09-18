@@ -11,6 +11,54 @@ MC6801/6803. The remaining 59 (and 36) are the subject of this page, plus a
 handful of documented instructions whose flag results the manual calls
 undefined.
 
+## The two measurements, and what the core does with them (milestone 6, 2026-09-18)
+
+Two people have published what real MC6800s do with unassigned opcodes, and
+this project has now read both:
+
+- **Wheeler 1977**: Gerry Wheeler, "Undocumented M6800 Instructions", *BYTE*
+  vol. 2 no. 12, December 1977, pp. 46-47, Table 1 and Figure 1 (scan:
+  <https://archive.org/details/byte-magazine-1977-12>, file
+  `1977_12_BYTE_02-12_The_Star_Trek_Computers.pdf`, SHA-1
+  `53af342f2bc68753924f4036ba7f81898cabb09f`). He executed the 59 unassigned
+  codes on his machine and describes six; of the rest he says only that "some
+  of those codes seem to be just NOPS" and "others change the flags in the
+  condition code register according to some pattern that is, as yet,
+  undeciphered". He gives no execution times, and warns that mask revisions
+  and second sources may differ.
+- **Doc TB 2019**: "Investigating the HCF (Halt & Catch Fire) instruction on
+  Motorola 6800", x86.fr, 2019-07-17
+  (<https://x86.fr/investigating-the-halt-and-catch-fire-instruction-on-motorola-6800/>),
+  an MC6800P at 1 MHz on a Universal Chip Analyzer, with the address lines
+  observed directly.
+
+**Tier:** both are measurements on silicon, of unknown mask revision, by one
+person each, with no published method beyond what is summarised here; this
+project treats them as the best evidence available and still marks each
+behaviour with its source.
+
+| Opcode | Wheeler 1977 | Doc TB 2019 | MAME 0.285 | Core, `undocumented=` `strict` / `measured` / `mame` |
+| --- | --- | --- | --- | --- |
+| `$14` | **NBA**: A AND B → A, "setting the condition codes correctly", next at PC+1 | AND of A and B into A on a later MC6800P; an early XC6800 prototype did not fetch it correctly | 1-byte no-op, 4 cycles | raises / **A ← A∧B, N Z, V=0, 2 cycles** / MAME |
+| `$15` | — | NOP, 2 cycles, registers unchanged | 1-byte no-op, 4 cycles | raises / **2-cycle NOP** / MAME |
+| `$87`, `$C7` | **STAA #, STAB #**: A (B) → PC+2; PC+1 is a don't-care hole; next at PC+3 — three bytes | — | stores at PC+1; two bytes; 3 cycles | raises / **Wheeler's store**, cycles `[unverified]` (4, the direct store's) / MAME |
+| `$8F`, `$CF` | **STS #, STX #**: high byte → PC+2, low → PC+3; hole at PC+1; next at PC+4 — four bytes (Figure 1) | — | stores at PC+1; three bytes; 4 cycles | raises / **Wheeler's store**, cycles `[unverified]` (5) / MAME |
+| `$9D`, `$DD` | **HCF**: address bus becomes a 16-bit counter reading all memory; ignores IRQ, NMI and HALT; only RESET recovers | 64 ms after the fetch, all address lines toggle in order, clean, at 500 kHz (1 MHz clock); interrupts ignored; hard reset only | `$9D`: JSR direct, 6 cycles; `$DD`: 2-byte no-op | **halt until reset** / same / MAME |
+| `$FD` | — | "exactly like" HCF, at 250 kHz | 3-byte no-op | **halt until reset** / same / MAME |
+| `$CD`, `$ED` | — | crash the CPU until a full reset; after 64 ms A0-A6 toggle with glitches, A11-A15 count down slowly | 3- and 2-byte no-ops | **halt until reset** / same / MAME |
+| every other unassigned opcode | "just NOPs" or "change the flags … according to some pattern that is, as yet, undeciphered" — which is which is not said | — | 1-, 2- or 3-byte no-op, 4 cycles | **raises** / raises / MAME |
+
+So on the store-immediate family MAME and silicon **disagree** — MAME's store
+lands one byte early and its instructions are a byte short — and on `$14`,
+`$9D`, `$CD`, `$DD`, `$ED` and `$FD` MAME runs on where the part does
+something else or stops. Drag Race's `$02` at `$1230` is in the last row:
+nobody has said what it does.
+
+The core's HCF is a halt only: the bus activity (the counter, the 64 ms
+delay, the rates) is recorded here but not modelled, so each step in HCF
+costs one cycle and reads nothing. On the MC6801/6803 neither author measured
+anything, so `"measured"` is `"strict"` there.
+
 ## HCF — "Halt and Catch Fire", `$9D` and `$DD`
 
 **Tier: hardware-captured** (for the behaviour), **datasheet** (for the fact
@@ -19,34 +67,40 @@ that the opcodes are unassigned).
 The coinage and the first published account are Gerry Wheeler's, in
 "Undocumented M6800 Instructions", *BYTE* vol. 2 no. 12, December 1977,
 pp. 46-47 (scan: <https://archive.org/details/byte-magazine-1977-12>). Wheeler
-counted Motorola's 197 documented opcodes, worked through what the other 59
-did on the parts he had, and named `$9D` and `$DD` **HCF**; he states the
-mnemonics are his own and that the behaviour was already known inside
-Motorola.
+counted Motorola's 197 documented opcodes, executed the other 59 "defying man
+and Motorola", and describes six of them in his Table 1; `$9D` and `$DD` are
+**HCF**, which he says "has been dubbed" that, and he states the mnemonics are
+his own. He suggests, without evidence, that "it is quite possible that the
+HCF instructions are put into the 6800 design intentionally in the interest of
+production testing".
 
-What the chip does: the opcode's incomplete decoding never terminates the
-instruction. The program counter free-runs, so the **address bus becomes a
-binary counter** sweeping the whole 64 KB space at high speed, the data bus is
-read and discarded, and the part responds to nothing but `RESET` — not to
-`IRQ`, not to `NMI`.
+What the chip does, in Wheeler's words: "the processor begins to read all of
+memory, sequentially, very quickly. In effect, the address bus turns into a 16
+bit counter. However, the processor takes no notice of what it is reading …
+The only way out of this race is with the RESET line. The machine ignores the
+IRQ, NMI and HALT lines." (Why it happens — the popular "incomplete decoding
+never terminates the instruction" — is an explanation nobody has
+demonstrated; `[unverified]`.)
 
 A modern hardware measurement exists: Doc TB, "Investigating the 'Halt and
 Catch Fire' instruction on Motorola 6800", x86.fr, 2019-07-17
 (<https://x86.fr/investigating-the-halt-and-catch-fire-instruction-on-motorola-6800/>),
-run on an MC6800P at 1 MHz on a Universal Chip Analyzer. Reported: about 64 ms
-after the opcode is fetched every address line begins toggling in sequence at
-roughly 500 kHz, a clean square wave with no glitching, i.e. A0 toggles every
-two clocks and each higher line at half the rate below it. **No behavioural
-difference between `$9D` and `$DD` was found.** That is one measurement by one
-author on one part; this project treats it as hardware-captured for the
-address-bus behaviour and `[unverified]` for the 64 ms figure's generality.
+run on an MC6800P at 1 MHz on a Universal Chip Analyzer. Reported: "64 ms
+after being fetched (which is quite long), the CPU starts to toggle all address
+lines in order, very fast (500 kHz for a 1 MHz clock) and with a clean square
+wave", and "after the HCF has been fetched, the 6800 stops responding to
+interrupts. A hard RESET is the only way to resume operations." The article
+treats `$9D` and `$DD` together and reports no difference between them. It
+also found three more opcodes that stop the part until reset, `$FD`, `$CD` and
+`$ED` (table above). One measurement by one author on one part: this project
+treats it as hardware-captured for the lock-up and the address-bus counter and
+`[unverified]` for the 64 ms figure's generality.
 
-Motorola kept HCF deliberately when designing the **MC6802** (1977) and
-repurposed it as a production self-test that exercises the on-chip address
-logic and the 128-byte RAM — reported in the same x86.fr piece and repeated by
-Wikipedia's *Halt and Catch Fire (computing)* article, which cites Wheeler.
-`[unverified]` here: this project has not found the Motorola document that
-states it.
+The story that Motorola kept HCF deliberately in the **MC6802** as a
+production self-test of the on-chip address logic and RAM comes from
+Wikipedia's *Halt and Catch Fire (computing)* article. An earlier revision of
+this page said the x86.fr article reports it too; **it does not** (read
+2026-09-18). `[unverified]`: no Motorola document stating it has been found.
 
 ### What MAME does, and why it matters
 
@@ -66,10 +120,9 @@ CPU types"` (`m6800.cpp:24`).
 
 **Consequence for this project.** A trace-based comparison against MAME can
 never exercise HCF, and if 6800 arcade code ever hits `$9D` MAME will do
-something plausible where the board would have locked up. `m6800-python` must
-implement HCF as a halt state that only `reset()` leaves, must **not** follow
-MAME on `$9D`, and must record the divergence rather than "fix" the core.
-This is the first entry in the divergence register the handoff asks for.
+something plausible where the board would have locked up. `m6800-python`
+therefore halts on the HCF family under its default policy, and follows MAME
+on `$9D` only when asked to (`undocumented="mame"`, used for trace replay).
 
 ## `$21` (`BRN`) and `$9D` (`JSR` direct): 6801 instructions MAME allows on a 6800
 
@@ -94,8 +147,9 @@ even matches `BRA`'s. `$9D` is not harmless: see HCF above.
 
 ## The store-immediate family: `$87`, `$8F`, `$C7`, `$CF` (and `$CD`)
 
-**Tier: datasheet** for the fact they are unassigned; **`[MAME only]`** for the
-behaviour.
+**Tier: datasheet** for the fact they are unassigned; **measured on silicon by
+Wheeler (1977)** for the behaviour, which **differs from MAME's** (table at
+the top of this page).
 
 Row 8 and row C of the opcode map have holes where a "store to an immediate
 operand" would sit: storing into the instruction stream is meaningless, so
@@ -116,12 +170,15 @@ sentinel**, so MAME executes a store nobody ever measured and charges it the
 made-up illegal-opcode cost. That is why the `$CD` cell in the instruction
 table shows 4 cycles rather than the 5 an `STD` in any other mode would cost.
 
-What real silicon does with these four is **not known to this project**. The
-6809 has the same family of holes and there hardware captures exist (David
-Banks's work); no equivalent 6800 capture has been found
-([validation.md](validation.md)). Treat them as `[unverified]`, implement
-MAME's behaviour behind a flag if trace comparison needs it, and do not present
-it as hardware behaviour.
+What real silicon does with the four MC6800 slots is **Wheeler's Table 1 and
+Figure 1**: the byte after the opcode is a don't-care "hole", the register is
+stored after it, at PC+2 (and PC+3), and execution resumes after the stored
+bytes — STAA #/STAB # are three bytes long, STS #/STX # four. MAME's version
+stores into the hole and is one byte shorter. Wheeler gives no cycle counts
+and says nothing about flags. The core implements his behaviour under
+`undocumented="measured"` (cycle counts and flags `[unverified]`), MAME's
+under `"mame"`, and raises under the default `"strict"`. The MC6801's `$CD`
+has no measurement at all.
 
 ## The illegal opcodes MAME merely logs
 
@@ -144,10 +201,10 @@ count taken from the `XX` sentinel, whose only purpose is to stop the emulator
 hanging: `#define XX 4 // illegal opcode unknown cycle count`
 (`m6800.cpp:248-249`). It was **5** in MAME 0.261 and **4** in 0.285 — the
 clearest possible demonstration that none of the three numbers (the length,
-the flags, the cycles) is a measurement. Wheeler's article shows that at least
-some of these opcodes do real work on silicon (he names several with
-semantics), so MAME's model is certainly wrong for some of them and nobody
-has published which.
+the flags, the cycles) is a measurement. Wheeler's article and Doc TB's show that some
+of them do real work on silicon — `$14` ANDs the accumulators, and `$CD`,
+`$DD`, `$ED` and `$FD` lock the part up — so MAME's model is wrong for those,
+and nobody has published which of the rest are true no-ops.
 
 The **53 opcodes MAME treats as illegal on the MC6800**:
 
@@ -169,17 +226,16 @@ The difference is exactly the 22 opcodes the 6801 assigns (`$04` `$05` `$38`
 says about `$9D` and `$DD`: neither list contains `$9D`, and `$DD` is illegal
 on the 6800 only because MAME needs the slot for `STD` on the 6801.
 
-Two specific claims worth chasing, both `[unverified]` here:
+Two claims settled by reading the sources on 2026-09-18:
 
-- **`$14`** is reported by the x86.fr article to AND both accumulators into A
-  on "the later MC6800P" only. That is a secondary claim about a variant part,
-  it is not corroborated, and MAME makes `$14` `illegl1`. Do not implement it
-  without a second source.
-- Wheeler's article characterises several other opcodes in the `$0x`/`$1x`
-  range. This project has **not** read the article's tables (only the
-  bibliographic record and secondary summaries); the build session should
-  read the *BYTE* scan and turn its table into the section this page is
-  missing. That is the single highest-value document for this page.
+- **`$14`** ANDs the accumulators into A: Wheeler (1977, "checked out
+  thoroughly … even setting the condition codes correctly") and Doc TB (2019,
+  "only the later MC6800P seems to support this") agree, from two different
+  decades of parts, so the core implements it under `undocumented="measured"`.
+  MAME makes `$14` `illegl1`.
+- **Wheeler characterises six opcodes, not "several in the `$0x`/`$1x`
+  range"** as an earlier revision of this page assumed without having read
+  him: `$14`, the four store-immediate slots and HCF.
 
 ## Undefined flag results on documented instructions
 
