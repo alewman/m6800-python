@@ -217,7 +217,8 @@ timeslice, and the documented-plus-invented mixture on the illegal opcodes.
 | Emulator | URL | Licence | Independent core? |
 | --- | --- | --- | --- |
 | **sim68xx** (dg1yfe) | <https://github.com/dg1yfe/sim68xx> | **GPL-2.0** | yes; explicitly multi-variant across the 6800 family |
-| **shdl6800** (GuzTech) | <https://github.com/GuzTech/shdl6800> | **ISC** | yes, and it is an **RTL** reimplementation in SpinalHDL, so it is the closest thing to a second opinion about *bus cycles* rather than just semantics |
+| **shdl6800** (GuzTech) | <https://github.com/GuzTech/shdl6800> | **ISC** | a partial SpinalHDL **port of n6800** (below), stopped at the design's part 8: no `CPX`, `LDS`/`LDX`, stack, subroutine or interrupt instructions, `DAA`, `TAB`/`TBA` or `ABA` |
+| **n6800** (Robert Baruch) | <https://github.com/RobertBaruch/n6800>, commit `f117162` | **GPL-3.0** | the RTL design shdl6800 ports, carried further (to part 11): nMigen, cycle by cycle, with formal properties per instruction |
 | **EXORsim** (Joe Allen) | <https://github.com/jhallen/exorsim> | **none stated** — treat as all-rights-reserved | yes; a 6800/6809 EXORciser and SWTPC emulator with assembler and debugger |
 | **Sim-6800** (Shyann) | <https://github.com/Shyann/Sim-6800> | unconfirmed | unverified provenance |
 | **jefftranter/6800** | <https://github.com/jefftranter/6800> | **no licence file found** (a search result claiming Apache-2.0 was **not** corroborated) | unverified |
@@ -226,8 +227,19 @@ Not found, though looked for: a transistor-level `visual6800` (only
 `visual6502` exists), and Ray Bellis's "USim" is a **6809** simulator, not a
 6800 one.
 
-**sim68xx and shdl6800 are the two to use**: both clearly licensed, both
-independently written, and one of them is RTL.
+**Used for rung 5: sim68xx and n6800** — n6800 rather than shdl6800 because
+it is the original of the two and the more complete. Two facts about them
+found on the way (2026-09-18):
+
+- **Neither RTL model was validated against silicon.** Both READMEs describe
+  verification by the author's own formal properties, and n6800's bus cycles
+  are written from Motorola's cycle-by-cycle tables — so on timing it is a
+  second reading of MCSDD Table 8, not a measurement. (This settles the
+  handoff brief's open question about shdl6800.)
+- **sim68xx's MC6800 opcode table carries Hitachi HD6301 cycle counts** (NOP 1,
+  BRA 3, INX 1 — `src/arch/m6800/optab.c` is a copy of the 6301 table), so it
+  offers no opinion on MC6800 timing; its 6801-family targets are the Hitachi
+  parts. It is compared on semantics, on the MC6800 only.
 
 ## The plan, in oracle-tier order
 
@@ -240,13 +252,13 @@ reorder them; each one's failure is cheapest to diagnose before the next.
 | 1 ✅ | Per-opcode unit tests transcribed from the corrected table: bytes, cycles, flags, for both `M6800` and `M6803` classes; plus `PSHX`/`PULX` order, `RTI` with both stack contents, `WAI`, `SWI`, and the three interrupt entries | datasheet, **judge** | documented semantics and counts as Motorola states them |
 | 2 ✅ | **Generate** a single-step corpus from MAME, the way `neetandev/m6809` was generated for the 6809, and run all 256 opcodes × N random states through it, comparing registers, memory and cycle count | MAME, detector | agreement with MAME on every documented opcode; every disagreement listed with the higher-tier source the core follows instead |
 | 3 ✅ | Boot-segment replay of `dragrace` (`scripts/mame_trace.sh dragrace 2 :maincpu`, 368,676 lines, 483 IRQ entries) and of `kncljoe`'s 6803 sound CPU, comparing `curpc a b x s cc` and `totalcycles` deltas per line, special-casing `CLI`/`TAP` | MAME, detector | hundreds of thousands of instructions of real arcade code agree, on both parts |
-| 4 | Williams sound-board host: memory map, one PIA with CB1 edge detection, an IRQ line, a DAC sink; drive it from the Robotron trace's command stream | MAME, detector | the 6808 runs a real sound ROM under a real host contract |
-| 5 | Cross-check against **sim68xx** and **shdl6800** on the step-2 cases; three-way diff | independent emulators, detectors | every rule in the core is datasheet-backed or agreed by three independent implementations, and shdl6800's RTL gives a second opinion on cycle counts |
+| 4 ✅ | Williams sound-board host: memory map, one PIA with CB1 edge detection, an IRQ line, a DAC sink; drive it from the Robotron trace's command stream | MAME, detector | the 6808 runs a real sound ROM under a real host contract |
+| 5 ✅ | Cross-check against **sim68xx** and **shdl6800** on the step-2 cases; three-way diff | independent emulators, detectors | every rule in the core is datasheet-backed or agreed by three independent implementations, and shdl6800's RTL gives a second opinion on cycle counts |
 | 6 ✅ | The undocumented set: HCF as a halt state, and the Wheeler table once the *BYTE* article has been read (done 2026-09-18: both sources read; `undocumented="strict"`, `"measured"`, `"mame"`) | hardware-captured (HCF), secondary (the rest) | the two opcodes anyone has measured behave correctly; everything else stays explicitly `[unverified]` |
 
 ## The record so far (2026-09-18)
 
-Rungs 0 to 3 pass. Every number below was produced by the command beside it,
+All seven rungs pass. Every number below was produced by the command beside it,
 on CPython 3.14.4.
 
 **Rung 1 — the manuals (tier: datasheet, the judge).** `pytest` runs 847
@@ -303,9 +315,53 @@ which halts under every policy but `"mame"`. `tests/test_undocumented.py`
 checks each against the article's table. Cycle counts nobody measured are
 marked `[unverified]`.
 
+**Rung 4 — a real board as the host (tier: emulator-derived).**
+`python scripts/williams_sound.py` builds the Williams sound board of
+Robotron on the core: the MC6808, RAM, ROM from the zip, an MC6821 PIA (port A
+to the DAC, port B and CB1 from the main board, both IRQ outputs onto the
+CPU's IRQ) at 894,886.25 Hz. Its input is 30 s of Robotron from MAME —
+Advance, coin, start and some play — captured by `scripts/williams_capture.lua`
+with Lua memory taps: the 176 sound commands the 6809 sent, each with its
+machine time, and every write the 6808 made to its PIA. Run from reset with
+the same commands at the same cycles, the board enters its IRQ handler at
+`$FB11` 86 times (3 of them straight from the `$FB83: beq $FB83` idle loop)
+and makes **all 199,423 PIA writes MAME made, in the same order with the same
+values — the same 199,418 DAC bytes** — each within 3 cycles of MAME's time
+(mean 1.0; MAME samples interrupts per timeslice, the core per instruction).
+The command stream came from MAME's main CPU directly rather than from a
+Robotron trace, which is simpler and times each command exactly.
+
+**Rung 5 — independent emulators (tier: emulator-derived).** Both run the
+MC6800 corpus's documented-opcode cases, 1,000 per opcode, from the same
+states as the core:
+
+- `python scripts/crosscheck/sim68xx.py` (sim68xx `d49c99a`, built in the
+  gitignored `third_party/`; registers and memory, not cycles):
+  **195,617 of 197,000 cases agree three ways** (core, MAME, sim68xx). In all
+  2,622 differences the core and MAME agree and sim68xx is the odd one out, and
+  the manuals side with the core each time: sim68xx's `CPX` takes N and V from
+  the 16-bit difference (M68PRM p. A-33: the high byte; 11 cases); its `WAI`
+  pushes nothing (p. A-76; 1,000 cases); its `DAA` breaks the manual's table on
+  6 inputs, e.g. A = `$FC`, H = C = 0 gives `$02` where the table's row says
+  add `$66` for `$62` and C = 1 (p. A-34), plus 365 inputs the table does not
+  cover; and it does not wrap an operand fetch past `$FFFF` (1 case).
+- `python scripts/crosscheck/n6800.py` (n6800 `f117162`, simulated in Python
+  3.9 with amaranth 0.3; registers, memory, cycles and bus order):
+  **173,527 of 197,000 cases agree**, and 173 of the 197
+  documented opcodes agree on every case, cycle counts and bus order included —
+  every stack, subroutine, interrupt, branch, indexed and read-modify-write
+  instruction among them. n6800 also makes 72,000 valid-bus cycles the
+  core does not, the MC6800's dummy reads ("Irrelevant Data", MCSDD Table 8),
+  which the core and MAME leave out by design. Where n6800 differs, the manual
+  again sides with the core: the twenty 8-bit immediate instructions take 3
+  cycles in n6800 and 2 in M68PRM and MCSDD; `TSX`/`TXS` omit the ±1 (pp. A-74,
+  A-75); `WAI` leaves SP one byte short of the seven it pushes (p. A-76); and
+  `DAA` sets V in 473 cases, where both manuals say V is not defined.
+
 **Open, carried forward:** the MC6800's `WAI`-exit cost (4 or 5); HCF's bus
 activity (not modelled); what a real part does with the ~50 unassigned opcodes
-neither source describes; rungs 4 and 5.
+neither source describes; the dummy reads, if a host ever needs them; `MUL`
+and `SUBD` in real code.
 
 ### What would raise the ceiling
 

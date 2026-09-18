@@ -155,7 +155,12 @@ deltas per line, stopping at the first I/O read it cannot reproduce.
   the same harness runs Knuckle Joe's 6803 far enough to exercise `MUL`,
   `LDD`/`STD`, `ADDD`/`SUBD` and `PSHX`/`PULX`.
 
-### Milestone 4 — the Williams sound board as the first host
+### Milestone 4 — the Williams sound board as the first host ✅ done 2026-09-18
+
+**Status:** `scripts/williams_sound.py` and `scripts/williams_capture.lua`: all
+199,423 PIA writes and 199,418 DAC bytes of a 30 s Robotron run match MAME,
+in order, within 3 cycles.
+
 
 A memory map, one MC6821 PIA with CB1 edge detection and an IRQ output, a DAC
 sink, and a cycle budget of 894,886 per emulated second
@@ -167,7 +172,14 @@ rather than emulating the 6809 side.
   for the same command. This is the rung that proves the embedding contract is
   usable, not just the core.
 
-### Milestone 5 — independent-emulator cross-check
+### Milestone 5 — independent-emulator cross-check ✅ done 2026-09-18
+
+**Status:** sim68xx (`scripts/crosscheck/sim68xx.py`) and n6800, the RTL
+design shdl6800 ports (`scripts/crosscheck/n6800.py`). Every difference is
+resolved by the manual in the core's favour; see `docs/validation.md`. Neither
+RTL model was validated against silicon, and sim68xx's MC6800 cycle table is
+Hitachi's.
+
 
 Build **sim68xx** (GPL-2.0) and **shdl6800** (ISC, an RTL implementation) and
 run the milestone-2 cases through both.
@@ -237,7 +249,8 @@ the section `docs/undocumented-behavior.md` is missing.
   own ROM executes `$02` at `$1230`, so this is not academic.
 - Whether the `$14` behaviour reported for "the later MC6800P" is real.
 - Reset's cycle cost, and whether A/B/X/SP are really indeterminate.
-- Whether `shdl6800` was validated against silicon.
+- ~~Whether `shdl6800` was validated against silicon~~ — it was not: it, and
+  n6800 which it ports, are checked by their authors' formal properties.
 
 ## What done looks like
 

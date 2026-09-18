@@ -1,11 +1,13 @@
 # m6800-python
 
-**Status (2026-09-18): the core exists and passes rungs 0 to 3 of the
-validation ladder** — the Motorola manuals, a generated MAME corpus, and
-13.5 million instructions of real arcade code replayed against MAME. It is
-checked against the manuals and against MAME; **nothing here has been
-verified against silicon, because for this family nothing can be** (see
-"Oracles" below). Rungs 4 to 6 are still to do.
+**Status (2026-09-18): the core exists and passes all seven rungs of the
+validation ladder** — the Motorola manuals; a generated MAME corpus; 13.5
+million instructions of real arcade code replayed against MAME; a Williams
+sound board, built on the core, producing MAME's DAC output byte for byte;
+two independent emulators; and the two published measurements of
+undocumented opcodes. It is checked against the manuals, against MAME and
+against other emulators; **nothing here has been verified against silicon,
+because for this family almost nothing can be** (see "Oracles" below).
 
 `m6800-python` is a readable, dependency-free Python 3.12+ instruction core
 for the Motorola **6800 family** — MC6800, MC6802 and MC6808, which share one
@@ -44,8 +46,8 @@ and Doc TB (2019) measured on real MC6800s; `undocumented="mame"` gives MAME
 | 1. Per-opcode tests from the manuals | datasheet (judge) | 847 tests pass: every opcode's cycles, length and stated flags; `*` flags against the manuals' Boolean formulae, exhaustive for 8-bit operations; all 1,024 `DAA` inputs |
 | 2. Generated MAME single-step corpus | MAME (detector) | 512,000 cases: 508,974 exact; the other 3,026 differ only in CC bits 7-6 after `TAP`/`RTI`, where the core follows the manual; 0 unexplained |
 | 3. Real code replayed against MAME | MAME (detector) | Drag Race (MC6800) 368,675 instructions, Knuckle Joe and Kid Niki (MC6803) 2,616,010 and 10,544,332: every register, bus access, cycle total and interrupt entry agrees |
-| 4. Williams sound board host | MAME (detector) | not started |
-| 5. sim68xx / shdl6800 three-way diff | independent emulators | not started |
+| 4. Williams sound board host | MAME (detector) | Robotron's sound board on the core, fed 176 commands captured from MAME: all 199,423 PIA writes and 199,418 DAC bytes identical to MAME's, within 3 cycles |
+| 5. Independent emulators | sim68xx, n6800 RTL (detectors) | sim68xx: 195,617 of 197,000 agree three ways, every other case sim68xx alone off; n6800: 173 of 197 opcodes agree on every case including cycles and bus order; each remaining difference settled by the manual in the core's favour |
 | 6. The undocumented set | measured on silicon (1977, 2019) | both sources read; HCF family halts; Wheeler's `$14` and store-immediate forms and Doc TB's `$15` under `undocumented="measured"`; MAME disagrees on the store-immediates |
 
 `python -m pytest` runs rungs 1 and 2 (2 only when the gitignored corpus has
@@ -166,8 +168,10 @@ Said plainly, because the next session needs to know:
 - **Not verified against silicon.** No hardware-tier oracle exists for this
   family beyond HCF; every result above is agreement with the manuals or with
   MAME, and is labelled as such.
-- **Rungs 4 and 5 are not done**: no Williams sound-board host yet, no
-  sim68xx/shdl6800 cross-check.
+- **The RTL cross-check used n6800, not shdl6800**: shdl6800 is an
+  incomplete SpinalHDL port of n6800 and would need a JDK, sbt and Verilator;
+  n6800 is the original and runs in Python. Neither was validated against
+  silicon.
 - **Open questions carried forward:** the MC6800's `WAI`-exit cost (4 or 5
   cycles; the core uses 4 from one constant); what a real part does with the
   ~50 unassigned opcodes neither measurement describes; HCF's bus activity
