@@ -154,15 +154,55 @@ def test_cli_with_i_already_clear_does_not_delay(part: str) -> None:
     assert cpu.step() == 12 and cpu.A == 0
 
 
-def test_cli_sei_loop_never_services_irq(part: str) -> None:
+def test_cli_sei_loop_never_services_irq_on_the_6803() -> None:
     # M6801RM section 5.4.1.1: LOOP CLI / SEI / BRA LOOP never takes the IRQ.
-    cpu, bus = make(part, [0x0E, 0x0F, 0x20, 0xFC])
+    cpu, bus = make("6803", [0x0E, 0x0F, 0x20, 0xFC])
     cpu.CC = 0xC0 | I
     bus.set_word(0xFFF8, 0x4000)
     cpu.irq = True
     for _ in range(30):
         cpu.step()
         assert 0x1000 <= cpu.PC <= 0x1003
+
+
+def test_mc6800_cli_after_an_even_opcode_does_not_delay() -> None:
+    # APPS p. A-13, Q15: with a zero in the low bit of the opcode before CLI,
+    # "a pending interrupt will be recognized as soon as execution of CLI is
+    # complete".  CLRA is $4F (odd), TSTA $4D (odd), CLRB $5F ... use INCA $4C.
+    cpu, bus = make("6800", [0x4C, 0x0E, 0x86, 0x55])  # INCA; CLI; LDAA #$55
+    cpu.CC = 0xC0 | I
+    bus.set_word(0xFFF8, 0x4000)
+    cpu.irq = True
+    cpu.step()  # INCA, masked
+    cpu.step()  # CLI
+    assert cpu.step() == 12 and cpu.PC == 0x4000 and cpu.A == 1  # LDAA never ran
+
+
+def test_mc6800_cli_after_an_odd_opcode_delays() -> None:
+    # APPS p. A-13, Q15: Motorola's NOP; CLI; WAI idiom -- NOP is $01, odd, so
+    # the instruction after CLI (here WAI) runs before the pending IRQ.
+    cpu, bus = make("6800", [0x01, 0x0E, 0x3E])
+    cpu.CC = 0xC0 | I
+    bus.set_word(0xFFF8, 0x4000)
+    cpu.irq = True
+    cpu.step()  # NOP
+    cpu.step()  # CLI
+    assert cpu.step() == 9 and cpu.waiting  # WAI stacked and waits ...
+    assert cpu.step() == 4 and cpu.PC == 0x4000  # ... then the IRQ ends the wait
+
+
+def test_mc6800_cli_loop_after_bra_takes_the_irq() -> None:
+    # The M6801RM loop is not safe on an MC6800: BRA ($20) is even, so the IRQ
+    # is recognised right after CLI (APPS p. A-13, Q15).
+    cpu, bus = make("6800", [0x0E, 0x0F, 0x20, 0xFC])
+    cpu.CC = 0xC0 | I
+    bus.set_word(0xFFF8, 0x4000)
+    cpu.irq = True
+    for _ in range(6):
+        cpu.step()
+        if cpu.PC == 0x4000:
+            break
+    assert cpu.PC == 0x4000
 
 
 def test_tap_delays_even_when_repeated(part: str) -> None:

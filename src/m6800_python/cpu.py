@@ -77,9 +77,10 @@ class M6800(
         """Execute one instruction or one interrupt entry; return its cycle count.
 
         Order at an instruction boundary: a halted (HCF) CPU stays halted; an
-        NMI edge is taken; then, unless the previous instruction was CLI or TAP,
-        a maskable request is taken if I is clear; a CPU inside WAI idles for
-        one cycle; otherwise one instruction runs.
+        NMI edge is taken; then, unless the previous instruction was TAP, or a
+        CLI that holds interrupts off for one instruction, a maskable request
+        is taken if I is clear; a CPU inside WAI idles for one cycle;
+        otherwise one instruction runs.
         """
         if self.halted:
             return 1
@@ -100,6 +101,8 @@ class M6800(
 
         opcode = self.read_byte(self.PC)
         self.PC = (self.PC + 1) & 0xFFFF
+        self._previous_opcode = self._opcode
+        self._opcode = opcode
         handler, ea, cycles = self._table[opcode]
         if ea is None:
             handler(self)
@@ -125,6 +128,7 @@ class M6803(M6800):
 
     PART = 6801
     _CPX_SETS_CARRY = True
+    _CLI_DELAY_NEEDS_ODD_OPCODE = False
 
     def __init__(
         self, read_byte: ReadByte, write_byte: WriteByte, *, undocumented: str = "strict"
