@@ -145,10 +145,11 @@ pages rendered with `pdftoppm`. What was done with them:
 - **Flag rules: the old table was wrong on 52 opcodes**, because its flag
   column came from MAME's handler *comments*; MAME's *code* agrees with the
   manuals on all of them. Corrected in start-here.md, each with its page.
-- **`CPX` is settled, and MAME is wrong for the MC6800**: M68PRM p. A-33
-  gives two byte compares, Z over both, N and V from the high byte, C not
-  affected; M6801RM p. A-39 gives a true 16-bit compare setting N Z V C.
-  MAME applies the 6801 rule to both.
+- **`CPX` is settled**: M68PRM p. A-33 gives two byte compares, Z over both,
+  N and V from the high byte, C not affected; M6801RM p. A-39 gives a true
+  16-bit compare setting N Z V C. MAME 0.285 models both (`cmpx_*` on the
+  6800, `cpx_*` on the 6801). The first write-up of milestone 0 said MAME
+  was wrong for the 6800; it had looked only at the 6801's handler table.
 - **Interrupt entry is 12 cycles** on both parts: MCSDD's MC6800 data sheet,
   Figure 13, and M6801RM §5.3 / Figure 5-12. The quoted 13 is a response
   time (one recognition cycle plus 12). Out of `WAI`, 4 on the 6801
