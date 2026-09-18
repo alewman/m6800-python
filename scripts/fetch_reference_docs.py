@@ -82,12 +82,13 @@ def fetch(name: str, dest: Path) -> Path:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--dest", type=Path,
-                        default=Path(__file__).resolve().parents[1] / "reference")
+    parser.add_argument(
+        "--dest", type=Path, default=Path(__file__).resolve().parents[1] / "reference"
+    )
     parser.add_argument("--only", choices=sorted(DOCUMENTS))
     arguments = parser.parse_args()
     arguments.dest.mkdir(parents=True, exist_ok=True)
-    for name in ([arguments.only] if arguments.only else sorted(DOCUMENTS)):
+    for name in [arguments.only] if arguments.only else sorted(DOCUMENTS):
         fetch(name, arguments.dest)
 
 
