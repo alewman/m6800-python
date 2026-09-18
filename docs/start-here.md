@@ -324,12 +324,14 @@ Plus two behavioural changes on opcodes the 6800 already had:
     "internal processing has been modified such that it can be used for
     branching similar to the single byte comparisons", with a `CPX` followed
     by `BHI` as its example — which works only because C is now set.
-  - **MAME 0.285 is wrong for the MC6800**: its one shared handler
-    (`6800ops.hxx:1107`, `cpx_im`, and the `_di`/`_ix`/`_ex` forms) does a
-    16-bit subtract with `SET_FLAGS16`, which sets C and computes N and V over
-    sixteen bits on both parts. It is right for the 6801. The 6800 core
-    therefore disagrees with MAME on `CPX`'s N, V and C by design; see
-    [undocumented-behavior.md](undocumented-behavior.md).
+  - **MAME 0.285 models both correctly**, with two handler sets: the 6800's
+    `m6800_insn[]` uses `cmpx_im`/`_di`/`_ix`/`_ex` (`6800ops.hxx:1093`, `1436`
+    and neighbours), which set N and V from the high-byte subtraction, Z from
+    the 16-bit difference and leave C alone; the 6801's `m6803_insn[]` uses
+    `cpx_*` (`6800ops.hxx:1107`), a 16-bit subtract with `SET_FLAGS16`. (An
+    earlier version of this page said MAME shared one handler and was wrong
+    for the 6800; that came from reading only the 6801 table and was itself
+    wrong.)
   - The extra work costs the 6801 a cycle: `CPX` is the only instruction that
     is **slower** on the 6801 (4/5/6/6 against 3/4/5/6).
 - **Speed.** The 6801 is not just "the 6800 plus instructions": among the

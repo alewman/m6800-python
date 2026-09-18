@@ -64,7 +64,7 @@ validation plan in order.
 **Status:** done; the results are recorded in `docs/validation.md` ("Motorola
 manuals"). The scans turned out to carry an OCR text layer, and with
 poppler-utils installed `scripts/extract_manual_tables.py` reads both Appendix
-A's. `CPX` is settled (MAME is wrong for the 6800) and interrupt entry is 12
+A's. `CPX` is settled (MAME models both parts correctly) and interrupt entry is 12
 cycles on both parts. One piece remains open: the MC6800's `WAI` exit, 4 or 5
 cycles. The original instructions follow.
 
@@ -204,7 +204,7 @@ the section `docs/undocumented-behavior.md` is missing.
 ## Known open questions to carry, not to resolve silently
 
 - ~~`CPX` flags on the 6800 versus the 6801~~ — settled in milestone 0:
-  M68PRM p. A-33 versus M6801RM p. A-39; MAME is wrong for the 6800.
+  M68PRM p. A-33 versus M6801RM p. A-39; MAME models both correctly.
 - ~~Interrupt entry: 12 or 13 cycles~~ — 12 on both parts (MCSDD Figure 13,
   M6801RM §5.3). `WAI` exit: 4 on the 6801 (M6801RM §5.4.2); **still open on
   the MC6800**, where MCSDD Figure 14 reads as 5.
