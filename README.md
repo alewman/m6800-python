@@ -118,14 +118,15 @@ repository (its `680x0` and `m68000` are the unrelated 16/32-bit MC68000);
 nobody has published a MAME-generated corpus the way `neetandev/m6809` did for
 the 6809; there is no Klaus-Dormann-style functional test and no ZEXALL
 equivalent; `hoglet67`, who built the 6502, 6809 and Z80 bus decoders, has no
-6800 one. The only hardware measurement anyone has published covers **two
-opcodes**: Doc TB's 2019 Universal Chip Analyzer capture of HCF (`$9D`,
-`$DD`), corroborating Gerry Wheeler's account in *BYTE*, December 1977. So the
-**judge here is the Motorola manuals** — four bitsavers scans, fetched and
-SHA-256-pinned by `scripts/fetch_reference_docs.py` — and **MAME 0.285 is a
-detector**, pinned by `scripts/fetch_mame_source.py` and exercised by three
-verified traces. Agreement with MAME will be reported as agreement with MAME,
-never as verification against silicon.
+6800 one. The only published measurements of real parts cover a handful of
+**undocumented** opcodes: Gerry Wheeler's six in *BYTE*, December 1977, and Doc
+TB's seven, captured on a Universal Chip Analyzer in 2019. So the **judge here
+is the Motorola manuals** — four bitsavers scans, fetched and SHA-256-pinned by
+`scripts/fetch_reference_docs.py` — and **MAME 0.285 is a detector**, pinned by
+`scripts/fetch_mame_source.py`, turned into a single-step corpus and replayed
+on real code; sim68xx and the n6800 RTL model are two more. Agreement with any
+of them is reported as agreement with that emulator, never as verification
+against silicon.
 [docs/validation.md](docs/validation.md) has the full inventory, the hashes and
 the seven-rung plan.
 
@@ -151,14 +152,20 @@ python scripts/fetch_mame_source.py        # MAME 0.285's 6800 core, hash-verifi
 python scripts/fetch_reference_docs.py     # the four Motorola scans, hash-verified
 python scripts/extract_manual_tables.py --markdown  # regenerate the instruction table from the manuals
 python scripts/dump_mame_tables.py         # MAME's view of the same table, as a detector
-scripts/mame_trace.sh dragrace 2 :maincpu  # MC6800 trace; see docs/mame-oracle.md
-scripts/mame_trace.sh kncljoe 10 :soundcpu # MC6803 trace
-M6800_PRESS="IN2:Advance:680:20" \
-  scripts/mame_trace.sh robotron 20 :soundcpu   # MC6808 Williams sound board
+python scripts/extract_manual_tables.py --python > tests/datasheet.py  # the per-opcode datasheet
+python scripts/mame_corpus.py generate     # rung 2: MAME 0.285's own handlers -> tests/vectors/
+python scripts/compare_mame_corpus.py      # rung 2: replay the corpus through the core
+python scripts/replay_trace.py dragrace    # rung 3 (also kncljoe, kidniki, bublbobl, esclwrld);
+                                           # with no trace, prints the MAME command that records it
+python scripts/williams_sound.py           # rung 4: the Robotron sound board against MAME
+python scripts/crosscheck/sim68xx.py       # rung 5: three-way diff with sim68xx
+python scripts/crosscheck/n6800.py         # rung 5: against the n6800 RTL model
+scripts/mame_trace.sh dragrace 2 :maincpu  # a raw MAME trace; see docs/mame-oracle.md
 ```
 
 Nothing they fetch or produce is committed: `reference/`, `tests/vectors/`,
-`*.trace`, `error.log`, `mame-work/` and `mame-home/` are gitignored. ROMs are
+`third_party/`, `*.trace`, `error.log`, `mame-work/` and `mame-home/` are
+gitignored. ROMs are
 read in place from `/data/emu/source/myrient.erista.me/files/MAME/ROMs (non-merged)/`
 and are never copied.
 
