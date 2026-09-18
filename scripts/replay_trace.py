@@ -89,6 +89,30 @@ MACHINES = {
         watch_reads="0000-5FFF",
         seconds=10,
     ),
+    # pinball/by6803.cpp: Bally's 6803 pinball MPU running Escape from the Lost
+    # World (1988): PIAs at $0020 and $0040, battery RAM at $1000-$17FF, ROM
+    # u2/u3 at $8000-$FFFF.  The only trace here that executes MUL.  It powers
+    # up with its NVRAM empty, so clear mame-work/esclwrld/nvram before recording.
+    "esclwrld": Machine(
+        part="6803",
+        tag=":maincpu",
+        roms=[("u2.128", 0x8000), ("u3.128", 0xC000)],
+        rom_ranges=[(0x8000, 0xFFFF)],
+        watch_reads="0000-7FFF",
+        seconds=8,
+    ),
+    # taito/bublbobl.cpp: Bubble Bobble's protection MCU, an MC6801U4 running its
+    # 4K internal ROM a78-01.17 at $F000; everything below is on-chip registers,
+    # RAM or the external bus, all logged.  It is the only trace here that runs
+    # SUBD in real code, over a hundred thousand times.
+    "bublbobl": Machine(
+        part="6803",
+        tag=":mcu",
+        roms=[("a78-01.17", 0xF000)],
+        rom_ranges=[(0xF000, 0xFFFF)],
+        watch_reads="0000-EFFF",
+        seconds=6,
+    ),
     # irem/m62.cpp (irem_audio, m62_sound_map): the Irem M62 sound board's
     # MC6803, ROM $4000-$FFFF; below that the on-chip registers and RAM, the
     # IRQ acknowledge at $0800 and the ADPCM latches at $0801-$0802.  Driven

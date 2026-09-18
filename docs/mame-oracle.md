@@ -286,13 +286,19 @@ trace prints the exact recording command for each game it knows.
 | `dragrace` | MC6800 | 2 s | 368,675 | 483 IRQ (479 out of `WAI`) | **all agree** |
 | `kncljoe` | MC6803 | 10 s | 2,616,010 | 40,050 NMI, 240 IRQ, 8 back-to-back | **all agree** |
 | `kidniki` | MC6803 | 40 s, coin, start and play | 10,544,332 | 160,015 NMI, 544 IRQ, 182 back-to-back | **all agree** |
+| `bublbobl` (`:mcu`) | MC6801U4 | 6 s | 1,794,851 | 332 IRQ | **all agree** |
+| `esclwrld` (Bally pinball) | MC6803 | 8 s | 2,271,980 | 6,241 OCF, 390 ICF, 391 IRQ | **all agree** |
 
 "Agree" means: registers before every instruction (CC bits 7-6 excepted, the
 one explained difference, see [validation.md](validation.md)), every non-ROM
-read and every write in order, and the cycle total at every line. The MC6801
-instructions seen in real code were `ABX`, `ADDD` (direct), `LDD`, `STD`,
-`PSHX` and `PULX`; **`MUL` and `SUBD` occur in none of these traces**, and are
-covered only by the single-step corpus and the manual-formula tests.
+read and every write in order, and the cycle total at every line. Every MC6801
+addition but `LSRD` and `ASLD` occurs in real code here: `MUL` 1,618 times in
+Escape from the Lost World (found by tracing candidate 6803 games and
+searching MAME's disassembly; Irem's and Seibu's sound drivers and the MC-10's
+Microsoft BASIC never execute it), `SUBD` 122,676 times in Bubble Bobble's MCU,
+and `ADDD`, `LDD`, `STD`, `PSHX`, `PULX` and `ABX` throughout.
+`scripts/mame_trace.lua` also takes `M6800_TYPE="FRAME:TEXT"` to type on a
+home computer's keyboard, which is how the MC-10 was checked.
 
 What the replays taught about MAME as a trace source:
 
