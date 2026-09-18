@@ -42,7 +42,7 @@ and Doc TB (2019) measured on real MC6800s; `undocumented="mame"` gives MAME
 
 | Rung | Judge or detector | Result |
 | --- | --- | --- |
-| 0. Read the manuals | datasheet (judge) | done: 197 + 220 opcodes extracted from Appendix A; `CPX` and the 12-cycle interrupt entry settled; the MC6800's `WAI` exit (4 or 5) still open |
+| 0. Read the manuals | datasheet (judge) | done: 197 + 220 opcodes extracted from Appendix A; `CPX`, the 12-cycle interrupt entry, the 4-cycle `WAI` exit and the MC6800's opcode-dependent `CLI` delay settled |
 | 1. Per-opcode tests from the manuals | datasheet (judge) | 847 tests pass: every opcode's cycles, length and stated flags; `*` flags against the manuals' Boolean formulae, exhaustive for 8-bit operations; all 1,024 `DAA` inputs |
 | 2. Generated MAME single-step corpus | MAME (detector) | 512,000 cases: 508,974 exact; the other 3,026 differ only in CC bits 7-6 after `TAP`/`RTI`, where the core follows the manual; 0 unexplained |
 | 3. Real code replayed against MAME | MAME (detector) | 17.6 million instructions of five games — Drag Race (MC6800), Knuckle Joe, Kid Niki, Escape from the Lost World (MC6803) and Bubble Bobble's MCU (MC6801U4): every register, bus access, cycle total and interrupt entry agrees; `MUL` and `SUBD` among them |
@@ -172,13 +172,16 @@ Said plainly, because the next session needs to know:
   incomplete SpinalHDL port of n6800 and would need a JDK, sbt and Verilator;
   n6800 is the original and runs in Python. Neither was validated against
   silicon.
-- **Open questions carried forward:** the MC6800's `WAI`-exit cost (4 or 5
-  cycles; the core uses 4 from one constant); what a real part does with the
-  ~50 unassigned opcodes neither measurement describes; HCF's bus activity
-  during the halt (not modelled); the cycle counts of Wheeler's instructions.
+- **Open questions carried forward:** whether the MC6800's `TAP` holds off an
+  IRQ as the 6801's does (the core assumes so); what a real part does with
+  the ~50 unassigned opcodes neither measurement describes; HCF's bus
+  activity during the halt (not modelled); the cycle counts of Wheeler's
+  instructions.
 - `LSRD` and `ASLD` do not occur in any replayed trace; they are covered by
   the manual-formula tests and the MAME corpus only.
-- APPS, the fourth manual, has not been read.
+- APPS, the fourth manual, has been searched for interrupt timing (its
+  Q&A appendix settled the `WAI` exit and the MC6800's `CLI` rule), not read
+  through.
 - Speed: the 30 s Williams board run takes 4.0 s on CPython 3.14 and 1.9 s on
   PyPy 3.11 (the whole test suite passes on both).
 

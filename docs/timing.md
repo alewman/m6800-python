@@ -64,7 +64,7 @@ neither exists in M68PRM ([undocumented-behavior.md](undocumented-behavior.md)).
 | Event | 6800 and 6801/6803 | Where MAME encodes it |
 | --- | --- | --- |
 | `IRQ`/`NMI` entry, not from `WAI` | **12** cycles charged after the interrupted instruction completes — MCSDD Figure 13 (MC6800) and M6801RM §5.3, Figure 5-12 (MC6801) | `m6800.cpp:449-473`, `cycles_to_eat = 12` |
-| `IRQ`/`NMI` entry out of `WAI` | **4** on the 6801 (M6801RM §5.4.2); on the 6800 **4 or 5, unresolved** (MCSDD Figure 14 reads as 5) | same, `cycles_to_eat = 4` |
+| `IRQ`/`NMI` entry out of `WAI` | **4** on both: APPS p. A-14, Q20 (MC6800); M6801RM §5.4.2 (MC6801) | same, `cycles_to_eat = 4` |
 | `SWI` | 12 (the opcode's own cycle count) | `cycles_6800[0x3F] = 12` |
 | `WAI` | 9, then the CPU idles | `cycles_6800[0x3E] = 9` |
 | `RTI` | 10 | `cycles_6800[0x3B] = 10` |
@@ -89,16 +89,23 @@ cycle of recognition plus the 12 (and 14 for `IRQ1`, which spends an extra
 cycle synchronising). For a core that samples at instruction boundaries the
 12 is the number to charge, and MAME's measured 16 = 4 + 12 above agrees.
 
-**Out of `WAI`.** M6801RM §5.4.2 (pp. 5-19 to 5-21) gives the 6801 five cycles
-from `NMI` to the first fetch after a `WAI` (six for `IRQ1`), which on the same
-accounting is **4** cycles of sequence: MAME's 4 is right for the 6801. For
-the MC6800, MCSDD's Figure 14 "Wait Instruction Timing" (printed p. 18) draws
-three cycles after the wake-up before the vector reads — one more than the
-6801 — and the 6800, unlike the 6801, floats its address and data buses while
-waiting and has to reclaim them. That points to **5**, but it is a reading of a
-timing diagram, not a stated count, so for the MC6800 this stays
-**`[unresolved: 4 or 5]`**; the core should take it from a single constant so
-the answer can change in one place.
+**Out of `WAI`: 4, on both parts.** For the MC6800, APPS answers it in so
+many words: "Four MPU cycles are required to start the interrupt sequence
+after a WAI instruction" (p. A-14, Q20). For the 6801, M6801RM §5.4.2
+(pp. 5-19 to 5-21) gives five cycles from `NMI` to the first fetch after a
+`WAI` (six for `IRQ1`), which on the same accounting is 4 cycles of sequence.
+MAME's 4 is right for both. (An earlier revision of this page read MCSDD's
+Figure 14 as 5 for the MC6800 and left the question open; APPS settles it.)
+
+**What an instruction-stepping core cannot express.** APPS (pp. A-10 to
+A-13) documents three MC6800 races that happen *inside* an instruction or an
+interrupt sequence: an `NMI` arriving during `SWI` fetches its vector from the
+**IRQ** location (Q9); an `NMI` arriving during the nine stacking cycles of an
+`IRQ` entry wins, and the `IRQ` pulse is lost (Q11; M6801RM §5.3 says the same
+for the 6801); an `IRQ` pulse shorter than two cycles, or arriving while I is
+set or during `SWI`, is lost (Q10). The core samples its inputs at instruction
+boundaries, so a host cannot place an edge inside an instruction and none of
+these arise; they are recorded here, not modelled.
 
 ## When interrupts are sampled
 
