@@ -12,6 +12,12 @@
 --                     a sound CPU that idles until the main board talks to it
 --                     and the main board itself is waiting for a switch, as
 --                     Williams's fresh-CMOS ROMs wait for Advance.
+--   M6800_WATCH_READS   "START-END[,START-END...]" (hex): log every read in
+--                     these ranges as "R addr value" after the instruction line.
+--   M6800_WATCH_WRITES  the same for writes, as "W addr value".  Together they
+--                     let scripts/replay_trace.py feed the core MAME's I/O
+--                     reads and check its writes; leave ROM out of the read
+--                     ranges, since the replay loads ROM from the zip.
 --
 -- Prints the state names the chosen device exposes and the 6800 vector table,
 -- then traces every instruction.  The register log goes to error.log in the
@@ -81,5 +87,19 @@ end
 
 local dbg = manager.machine.debugger
 dbg.visible_cpu = cpu
+
+-- Optional: log memory accesses with watchpoints (MAME's wpdata is the value
+-- read or written; the action's "g" keeps the machine running).
+local function watch(ranges, kind, letter)
+	if not ranges or ranges == "" then return end
+	for first, last in ranges:gmatch("(%x+)-(%x+)") do
+		local a, b = tonumber(first, 16), tonumber(last, 16)
+		dbg:command(string.format('wpset %X,%X,%s,1,{logerror "%s %%X %%X\\n",wpaddr,wpdata; g}',
+			a, b - a + 1, kind, letter))
+		print(string.format("WATCH: %s %04X-%04X", letter, a, b))
+	end
+end
+watch(os.getenv("M6800_WATCH_READS"), "r", "R")
+watch(os.getenv("M6800_WATCH_WRITES"), "w", "W")
 dbg:command('trace ' .. file .. ',,noloop,{logerror "%X %X %X %X %X %X %X %d\\n",curpc,a,b,x,s,cc,wai,totalcycles}')
 dbg:command("go")
