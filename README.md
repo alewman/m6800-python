@@ -1,8 +1,8 @@
 # m6800-python
 
 **Status (2026-09-18): the core exists and passes all seven rungs of the
-validation ladder** — the Motorola manuals; a generated MAME corpus; 13.5
-million instructions of real arcade code replayed against MAME; a Williams
+validation ladder** — the Motorola manuals; a generated MAME corpus; 17.6
+million instructions of real arcade and pinball code replayed against MAME; a Williams
 sound board, built on the core, producing MAME's DAC output byte for byte;
 two independent emulators; and the two published measurements of
 undocumented opcodes. It is checked against the manuals, against MAME and
@@ -45,7 +45,7 @@ and Doc TB (2019) measured on real MC6800s; `undocumented="mame"` gives MAME
 | 0. Read the manuals | datasheet (judge) | done: 197 + 220 opcodes extracted from Appendix A; `CPX` and the 12-cycle interrupt entry settled; the MC6800's `WAI` exit (4 or 5) still open |
 | 1. Per-opcode tests from the manuals | datasheet (judge) | 847 tests pass: every opcode's cycles, length and stated flags; `*` flags against the manuals' Boolean formulae, exhaustive for 8-bit operations; all 1,024 `DAA` inputs |
 | 2. Generated MAME single-step corpus | MAME (detector) | 512,000 cases: 508,974 exact; the other 3,026 differ only in CC bits 7-6 after `TAP`/`RTI`, where the core follows the manual; 0 unexplained |
-| 3. Real code replayed against MAME | MAME (detector) | Drag Race (MC6800) 368,675 instructions, Knuckle Joe and Kid Niki (MC6803) 2,616,010 and 10,544,332: every register, bus access, cycle total and interrupt entry agrees |
+| 3. Real code replayed against MAME | MAME (detector) | 17.6 million instructions of five games — Drag Race (MC6800), Knuckle Joe, Kid Niki, Escape from the Lost World (MC6803) and Bubble Bobble's MCU (MC6801U4): every register, bus access, cycle total and interrupt entry agrees; `MUL` and `SUBD` among them |
 | 4. Williams sound board host | MAME (detector) | Robotron's sound board on the core, fed 176 commands captured from MAME: all 199,423 PIA writes and 199,418 DAC bytes identical to MAME's, within 3 cycles |
 | 5. Independent emulators | sim68xx, n6800 RTL (detectors) | sim68xx: 195,617 of 197,000 agree three ways, every other case sim68xx alone off; n6800: 173 of 197 opcodes agree on every case including cycles and bus order; each remaining difference settled by the manual in the core's favour |
 | 6. The undocumented set | measured on silicon (1977, 2019) | both sources read; HCF family halts; Wheeler's `$14` and store-immediate forms and Doc TB's `$15` under `undocumented="measured"`; MAME disagrees on the store-immediates |
@@ -176,10 +176,11 @@ Said plainly, because the next session needs to know:
   cycles; the core uses 4 from one constant); what a real part does with the
   ~50 unassigned opcodes neither measurement describes; HCF's bus activity
   during the halt (not modelled); the cycle counts of Wheeler's instructions.
-- `MUL` and `SUBD` do not occur in any replayed trace; they are covered by the
-  manual-formula tests and the MAME corpus only.
+- `LSRD` and `ASLD` do not occur in any replayed trace; they are covered by
+  the manual-formula tests and the MAME corpus only.
 - APPS, the fourth manual, has not been read.
-- No PyPy run yet; the core has only been timed on CPython 3.14.
+- Speed: the 30 s Williams board run takes 4.0 s on CPython 3.14 and 1.9 s on
+  PyPy 3.11 (the whole test suite passes on both).
 
 ## License
 

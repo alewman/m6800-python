@@ -302,10 +302,16 @@ cycle total, and every interrupt entry.
 | `dragrace` | MC6800 | 368,675 | 483 IRQ, 479 of them out of `WAI` | all agree |
 | `kncljoe` | MC6803 | 2,616,010 | 40,050 NMI, 240 IRQ, 8 back-to-back | all agree |
 | `kidniki` | MC6803 | 10,544,332 | 160,015 NMI, 544 IRQ, 182 back-to-back | all agree |
+| `bublbobl` (MCU) | MC6801U4 | 1,794,851 | 332 IRQ | all agree |
+| `esclwrld` (Bally pinball) | MC6803 | 2,271,980 | 6,241 OCF, 390 ICF, 391 IRQ | all agree |
 
-Drag Race executes one undocumented opcode, `$02` at `$1230`; it replays
-only because `undocumented="mame"` gives it MAME's behaviour. `MUL` and `SUBD`
-occur in none of the traces.
+17,595,848 instructions in all. Drag Race executes one undocumented opcode,
+`$02` at `$1230`; it replays only because `undocumented="mame"` gives it
+MAME's behaviour. The MC6801 additions seen in real code: `MUL` (1,618 times,
+Escape from the Lost World), `SUBD` (122,676, Bubble Bobble's MCU), `ADDD`,
+`LDD`, `STD`, `PSHX`, `PULX`, `ABX`; only `LSRD` and `ASLD` occur in none of
+the traces. Escape from the Lost World also exercises the 6803's on-chip
+timer interrupts through the core's `irq2` input.
 
 **Rung 6 — the undocumented set (tier: measured on silicon, 1977 and 2019).**
 Both published measurements have been read and are implemented under
@@ -360,8 +366,8 @@ states as the core:
 
 **Open, carried forward:** the MC6800's `WAI`-exit cost (4 or 5); HCF's bus
 activity (not modelled); what a real part does with the ~50 unassigned opcodes
-neither source describes; the dummy reads, if a host ever needs them; `MUL`
-and `SUBD` in real code.
+neither source describes; the dummy reads, if a host ever needs them;
+`LSRD`/`ASLD` in real code.
 
 ### What would raise the ceiling
 

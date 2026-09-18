@@ -132,13 +132,13 @@ standalone.
   `DAA`'s V, `CPX` if milestone 0 finds MAME wrong. **Do not change the core
   to match MAME where the manual disagrees.**
 
-### Milestone 3 — MAME boot-segment replay ✅ done 2026-09-18, one gap
+### Milestone 3 — MAME boot-segment replay ✅ done 2026-09-18
 
 **Status:** `scripts/replay_trace.py` replays whole watchpoint-logged traces,
 not just the boot segment: Drag Race 368,675, Knuckle Joe 2,616,010 and Kid
-Niki 10,544,332 instructions, all agreeing. **Gap:** no available trace
-executes `MUL` or `SUBD` (Kid Niki supplies the `ADDD`); those two rest on the
-rung 1 and rung 2 tests.
+Niki 10,544,332 instructions, all agreeing. `MUL` and `SUBD` were
+later found in real code too — Escape from the Lost World (Bally pinball) and
+Bubble Bobble's MC6801U4 — and replay cleanly; only `LSRD`/`ASLD` are unseen.
 
 
 `scripts/mame_trace.sh dragrace 2 :maincpu` (3.2 s wall, 368,676 instruction

@@ -12,6 +12,9 @@
 --                     a sound CPU that idles until the main board talks to it
 --                     and the main board itself is waiting for a switch, as
 --                     Williams's fresh-CMOS ROMs wait for Advance.
+--   M6800_TYPE        "FRAME:TEXT" -- type TEXT on the machine's keyboard at
+--                     frame FRAME (MAME's natural keyboard; "\\n" is Return).
+--                     Used to make a home computer's BASIC compute something.
 --   M6800_WATCH_READS   "START-END[,START-END...]" (hex): log every read in
 --                     these ranges as "R addr value" after the instruction line.
 --   M6800_WATCH_WRITES  the same for writes, as "W addr value".  Together they
@@ -81,6 +84,20 @@ if press and press ~= "" then
 				item.button:set_value(0)
 				print("PRESS: " .. item.name .. " up at frame " .. frames)
 			end
+		end
+	end)
+end
+
+local typing = os.getenv("M6800_TYPE")
+if typing and typing ~= "" then
+	local at, text = typing:match("^(%d+):(.*)$")
+	text = text:gsub("\\n", "\n")
+	local frames_typed = 0
+	emu.register_frame_done(function()
+		frames_typed = frames_typed + 1
+		if frames_typed == tonumber(at) then
+			manager.machine.natkeyboard:post(text)
+			print("TYPE: posted at frame " .. at)
 		end
 	end)
 end
