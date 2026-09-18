@@ -48,14 +48,18 @@ FLAG_NAMES = "HINZVC"
 # (pdftoppm -r 150).  Key: (manual, pdf page) -> list of
 # (mode, cycles, bytes, opcode).  Each entry was checked on the image.
 MANUAL_ROWS: dict[tuple[str, int], list[tuple[str, int, int, int]]] = {
-    ("M68PRM", 70): [("INH", 4, 1, 0x34)],                        # DES, A-37
-    ("M68PRM", 109): [("INH", 9, 1, 0x3E)],                       # WAI, A-76
-    ("M6801RM", 316): [("IND", 6, 2, 0xAD)],                      # JSR, A-49
-    ("M6801RM", 319): [("DIR", 4, 2, 0x9E)],                      # LDS, A-52
-    ("M6801RM", 333): [("ACCA", 2, 1, 0x49)],                     # ROL, A-66
-    ("M6801RM", 339): [("INH", 2, 1, 0x0D)],                      # SEC, A-72
-    ("M6801RM", 354): [("ACCA", 2, 1, 0x4D), ("ACCB", 2, 1, 0x5D),  # TST, A-87
-                       ("EXT", 6, 3, 0x7D), ("IND", 6, 2, 0x6D)],
+    ("M68PRM", 70): [("INH", 4, 1, 0x34)],  # DES, A-37
+    ("M68PRM", 109): [("INH", 9, 1, 0x3E)],  # WAI, A-76
+    ("M6801RM", 316): [("IND", 6, 2, 0xAD)],  # JSR, A-49
+    ("M6801RM", 319): [("DIR", 4, 2, 0x9E)],  # LDS, A-52
+    ("M6801RM", 333): [("ACCA", 2, 1, 0x49)],  # ROL, A-66
+    ("M6801RM", 339): [("INH", 2, 1, 0x0D)],  # SEC, A-72
+    ("M6801RM", 354): [
+        ("ACCA", 2, 1, 0x4D),
+        ("ACCB", 2, 1, 0x5D),  # TST, A-87
+        ("EXT", 6, 3, 0x7D),
+        ("IND", 6, 2, 0x6D),
+    ],
 }
 
 # Instruction pages that carry no opcode rows by design: DAA's table starts
@@ -64,20 +68,40 @@ NO_ROWS = {("M68PRM", 67), ("M68PRM", 101), ("M6801RM", 349)}
 
 ROW = re.compile(
     r"^\s*(?:(?P<acc>[AB8])\s+)?['`]?(?P<mode>[A-Za-z]{1,8})\s+(?P<cyc>\d{1,2})\s+"
-    r"(?P<bytes>[123])\s+(?P<hex>\S{1,3}?)[·.,]?\s+\.?(?P<oct>[0-7]{3})\s+(?P<dec>\d{3})\s*\S*\s*$")
+    r"(?P<bytes>[123])\s+(?P<hex>\S{1,3}?)[·.,]?\s+\.?(?P<oct>[0-7]{3})\s+(?P<dec>\d{3})\s*\S*\s*$"
+)
 # OCR reads the flag letters as "z", "c", "1" (for I) and sometimes puts a stray dot before them.
-FLAG_LINE = re.compile(r"^\s*(?:Condition\s+Codes:|Codes:)?\s*\.?\s*(?P<f>[HINZVCzc1])\s*[:;,.]\s*(?P<t>\S.*)$")
+FLAG_LINE = re.compile(
+    r"^\s*(?:Condition\s+Codes:|Codes:)?\s*\.?\s*(?P<f>[HINZVCzc1])\s*[:;,.]\s*(?P<t>\S.*)$"
+)
 
 SEPARATORS = {"I", "|", "'", "l", ".", "-", ".-", "·", "r", "T", "J", "-1", ","}
 
-MODE_FIX = {"INH": "INH", "INO": "IND", "IND": "IND", "DIA": "DIR", "OIR": "DIR", "DIR": "DIR",
-            "IMM": "IMM", "RMM": "IMM", "EXT": "EXT", "REL": "REL", "INHERENT": "INH",
-            "A": "ACCA", "B": "ACCB", "8": "ACCB"}
+MODE_FIX = {
+    "INH": "INH",
+    "INO": "IND",
+    "IND": "IND",
+    "DIA": "DIR",
+    "OIR": "DIR",
+    "DIR": "DIR",
+    "IMM": "IMM",
+    "RMM": "IMM",
+    "EXT": "EXT",
+    "REL": "REL",
+    "INHERENT": "INH",
+    "A": "ACCA",
+    "B": "ACCB",
+    "8": "ACCB",
+}
 
 
 def page_text(pdf: Path, page: int) -> str:
-    return subprocess.run(["pdftotext", "-layout", "-f", str(page), "-l", str(page), str(pdf), "-"],
-                          check=True, capture_output=True, text=True).stdout
+    return subprocess.run(
+        ["pdftotext", "-layout", "-f", str(page), "-l", str(page), str(pdf), "-"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
 
 
 def classify(rule: str) -> str:
@@ -114,7 +138,9 @@ def parse_flags(lines: list[str]) -> str | None:
     if re.search(r"Codes:\s+Not:?\s+affected", joined):
         return "------"
     # RTI and TAP: every bit comes from the stack or from ACCA.
-    if re.search(r"Codes:\s+(Restored to the states pulled|Set or reset according to the contents)", joined):
+    if re.search(
+        r"Codes:\s+(Restored to the states pulled|Set or reset according to the contents)", joined
+    ):
         return "######"
     return None
 
@@ -130,7 +156,9 @@ def extract(manual: str) -> tuple[dict[int, dict], list[str]]:
         body = [l for l in lines if l.strip()]
         if not body:
             continue
-        folio = next((l.strip() for l in reversed(body) if re.fullmatch(r"\s*A\s*-\s*\S+\s*", l)), "?")
+        folio = next(
+            (l.strip() for l in reversed(body) if re.fullmatch(r"\s*A\s*-\s*\S+\s*", l)), "?"
+        )
         title = body[0].split()[0] if body[0].split() else "?"
         flags = parse_flags(body)
         # DAA's and SWI's addressing tables spill onto the next page.
@@ -147,7 +175,9 @@ def extract(manual: str) -> tuple[dict[int, dict], list[str]]:
                 continue
             octal, dec = int(m.group("oct"), 8), int(m.group("dec"))
             if octal != dec:
-                problems.append(f"{manual} p{page} ({folio}): octal/decimal disagree: {line.strip()}")
+                problems.append(
+                    f"{manual} p{page} ({folio}): octal/decimal disagree: {line.strip()}"
+                )
                 continue
             hex_ok = m.group("hex").upper().replace("O", "0") == f"{dec:02X}"
             mode = MODE_FIX.get(m.group("mode").upper().strip("'"), m.group("mode"))
@@ -160,11 +190,21 @@ def extract(manual: str) -> tuple[dict[int, dict], list[str]]:
                 # (BHS = BCC, BLO = BCS, LSL = ASL, LSLD = ASLD); they must agree.
                 first = records[op]
                 if (first["cycles"], first["bytes"], first["flags"]) != (cyc, nbytes, flags):
-                    problems.append(f"{manual} p{page}: opcode {op:02X} disagrees with p{first['pdf_page']}")
+                    problems.append(
+                        f"{manual} p{page}: opcode {op:02X} disagrees with p{first['pdf_page']}"
+                    )
                 first.setdefault("aliases", []).append(f"{title} p{page}")
                 continue
-            records[op] = {"title": title, "mode": mode, "cycles": cyc, "bytes": nbytes,
-                           "flags": flags, "pdf_page": page, "folio": folio, "hex_ocr_ok": hex_ok}
+            records[op] = {
+                "title": title,
+                "mode": mode,
+                "cycles": cyc,
+                "bytes": nbytes,
+                "flags": flags,
+                "pdf_page": page,
+                "folio": folio,
+                "hex_ocr_ok": hex_ok,
+            }
         if not rows and (manual, page) not in NO_ROWS:
             problems.append(f"{manual} p{page} ({folio}) {title}: no opcode rows parsed")
         if rows and flags is None:
@@ -178,9 +218,13 @@ def mame_cycles(manual: str) -> list[int]:
         text, array, cls = (src / "m6800.cpp").read_text(), "cycles_6800", "m6800_cpu_device"
     else:
         text, array, cls = (src / "m6801.cpp").read_text(), "cycles_6803", "m6801_cpu_device"
-    body = re.search(re.escape(cls) + r"::" + array + r"\[256\]\s*=\s*\{(.*?)\n\};", text, re.S).group(1)
+    body = re.search(
+        re.escape(cls) + r"::" + array + r"\[256\]\s*=\s*\{(.*?)\n\};", text, re.S
+    ).group(1)
     body = re.sub(r"/\*.*?\*/", "", body)
-    return [-1 if v.strip() == "XX" else int(v) for v in body.replace("\n", " ").split(",") if v.strip()]
+    return [
+        -1 if v.strip() == "XX" else int(v) for v in body.replace("\n", " ").split(",") if v.strip()
+    ]
 
 
 def hnzvc(flags: str) -> str:
@@ -236,11 +280,18 @@ def markdown(prm: dict[int, dict], rm: dict[int, dict]) -> None:
     grouped = mame.load()
     for mnemonic in sorted(grouped):
         modes = grouped[mnemonic]
-        print("| **%s** | %s | %s | %s | %s | %s | %s | %s |" % (
-            mnemonic, mame.OPERATION.get(mnemonic, "?"),
-            cell(modes.get("immediate")), cell(modes.get("direct")),
-            cell(modes.get("indexed")), cell(modes.get("extended")),
-            cell(modes.get("inherent") or modes.get("relative")), flags(modes)))
+        print(
+            "| **{}** | {} | {} | {} | {} | {} | {} | {} |".format(
+                mnemonic,
+                mame.OPERATION.get(mnemonic, "?"),
+                cell(modes.get("immediate")),
+                cell(modes.get("direct")),
+                cell(modes.get("indexed")),
+                cell(modes.get("extended")),
+                cell(modes.get("inherent") or modes.get("relative")),
+                flags(modes),
+            )
+        )
 
 
 def python_module(prm: dict[int, dict], rm: dict[int, dict]) -> None:
@@ -283,14 +334,18 @@ def python_module(prm: dict[int, dict], rm: dict[int, dict]) -> None:
         length = (a or b)["bytes"]
         folio_a = a and f"M68PRM A-{a['pdf_page'] - 33}"
         folio_b = b and f"M6801RM A-{b['pdf_page'] - 267}"
-        print(f"    0x{op:02X}: Opcode({mnemonic!r}, {mode!r}, {length}, "
-              f"{a and a['cycles']!r}, {b and b['cycles']!r}, "
-              f"{a and a['flags']!r}, {b and b['flags']!r}, {folio_a!r}, {folio_b!r}),")
+        print(
+            f"    0x{op:02X}: Opcode({mnemonic!r}, {mode!r}, {length}, "
+            f"{a and a['cycles']!r}, {b and b['cycles']!r}, "
+            f"{a and a['flags']!r}, {b and b['flags']!r}, {folio_a!r}, {folio_b!r}),"
+        )
     print("}")
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("--report", action="store_true", help="diff the manuals against MAME 0.285")
     parser.add_argument("--markdown", action="store_true", help="print docs/start-here.md's table")
     parser.add_argument("--python", action="store_true", help="print tests/datasheet.py")
@@ -298,7 +353,10 @@ def main() -> None:
     out = {}
     for manual in MANUALS:
         records, problems = extract(manual)
-        out[manual] = {"records": {f"{op:02X}": r for op, r in sorted(records.items())}, "problems": problems}
+        out[manual] = {
+            "records": {f"{op:02X}": r for op, r in sorted(records.items())},
+            "problems": problems,
+        }
     tables = [{int(k, 16): v for k, v in out[m]["records"].items()} for m in MANUALS]
     if args.markdown:
         markdown(*tables)
@@ -316,15 +374,17 @@ def main() -> None:
             print("  PROBLEM", p)
         for op, r in sorted(recs.items()):
             if not r["hex_ocr_ok"]:
-                print(f"  note {op:02X}: hex column OCR differs (octal/decimal agree) p{r['pdf_page']}")
+                print(f"  note {op:02X}: hex OCR differs (octal/decimal agree) p{r['pdf_page']}")
         mame = mame_cycles(manual)
         for op in range(256):
             m, r = mame[op], recs.get(op)
             if r is None and m != -1:
                 print(f"  MAME-only {op:02X}: MAME {m} cycles, not in {manual}")
             elif r is not None and m != r["cycles"]:
-                print(f"  CYCLES {op:02X} {r['title']} {r['mode']}: {manual} {r['cycles']} "
-                      f"(p{r['pdf_page']} {r['folio']}) vs MAME {m}")
+                print(
+                    f"  CYCLES {op:02X} {r['title']} {r['mode']}: {manual} {r['cycles']} "
+                    f"(p{r['pdf_page']} {r['folio']}) vs MAME {m}"
+                )
 
 
 if __name__ == "__main__":
