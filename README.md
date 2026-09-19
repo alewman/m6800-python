@@ -9,7 +9,7 @@ undocumented opcodes. It is checked against the manuals, against MAME and
 against other emulators; **nothing here has been verified against silicon,
 because for this family almost nothing can be** (see "Oracles" below).
 
-`m6800-python` is a readable, dependency-free Python 3.12+ instruction core
+`m6800-python` is a readable, dependency-free instruction core
 for the Motorola **6800 family** — MC6800, MC6802 and MC6808, which share one
 instruction set, and the MC6801/MC6803 superset — built to the same embedding
 contract as [z80-python](https://github.com/alewman/z80-python) and
