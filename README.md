@@ -38,12 +38,41 @@ halts until reset. `undocumented="measured"` adds what Wheeler (*BYTE*, 1977)
 and Doc TB (2019) measured on real MC6800s; `undocumented="mame"` gives MAME
 0.285's behaviour instead, for trace replay.
 
+## Reading and stepping through code
+
+The same tooling as z80-python — a structured disassembler, CPU state
+capture/restore, a debug session with breakpoints, watchpoints and history, a
+command debugger, and comparable JSON Lines traces — plus a command line that
+loads ROMs straight out of MAME zips:
+
+```text
+$ python -m m6800_python --zip robotron.zip:video_sound_rom_3_std_767.ic12@F000 --reset
+m6800> registers
+A=00 B=00 X=0000 SP=0000 PC=F01D CC=D0 -I----
+IRQ=0 NMI=0 WAI=0 HCF=0 INHIBIT=0
+m6800> disassemble
+> F01D  0F          SEI
+  F01E  8E 00 7F    LDS #$007F
+  F021  CE 04 00    LDX #$0400
+  F024  6F 01       CLR $01,X
+...
+m6800> step 3
+m6800> break F044
+m6800> run 1000
+```
+
+The disassembler shares its opcode table with the core and agrees with MAME's
+own on all 4,172 distinct instructions of the five replayed games.
+[docs/debug-session.md](docs/debug-session.md) has the commands and the API;
+[docs/disassembly.md](docs/disassembly.md), [docs/cpu-state.md](docs/cpu-state.md)
+and [docs/trace-schema.md](docs/trace-schema.md) the rest.
+
 ## Where it stands
 
 | Rung | Judge or detector | Result |
 | --- | --- | --- |
 | 0. Read the manuals | datasheet (judge) | done: 197 + 220 opcodes extracted from Appendix A; `CPX`, the 12-cycle interrupt entry, the 4-cycle `WAI` exit and the MC6800's opcode-dependent `CLI` delay settled |
-| 1. Per-opcode tests from the manuals | datasheet (judge) | 847 tests pass: every opcode's cycles, length and stated flags; `*` flags against the manuals' Boolean formulae, exhaustive for 8-bit operations; all 1,024 `DAA` inputs |
+| 1. Per-opcode tests from the manuals | datasheet (judge) | 847 core tests pass (911 with the tooling): every opcode's cycles, length and stated flags; `*` flags against the manuals' Boolean formulae, exhaustive for 8-bit operations; all 1,024 `DAA` inputs |
 | 2. Generated MAME single-step corpus | MAME (detector) | 512,000 cases: 508,974 exact; the other 3,026 differ only in CC bits 7-6 after `TAP`/`RTI`, where the core follows the manual; 0 unexplained |
 | 3. Real code replayed against MAME | MAME (detector) | 17.6 million instructions of five games — Drag Race (MC6800), Knuckle Joe, Kid Niki, Escape from the Lost World (MC6803) and Bubble Bobble's MCU (MC6801U4): every register, bus access, cycle total and interrupt entry agrees; `MUL` and `SUBD` among them |
 | 4. Williams sound board host | MAME (detector) | Robotron's sound board on the core, fed 176 commands captured from MAME: all 199,423 PIA writes and 199,418 DAC bytes identical to MAME's, within 3 cycles |
@@ -141,6 +170,9 @@ the seven-rung plan.
 - [docs/validation.md](docs/validation.md) — oracles, tiers, licences, pins,
   and the plan.
 - [docs/mame-oracle.md](docs/mame-oracle.md) — the verified MAME trace recipe.
+- [docs/disassembly.md](docs/disassembly.md), [docs/debug-session.md](docs/debug-session.md),
+  [docs/cpu-state.md](docs/cpu-state.md), [docs/trace-schema.md](docs/trace-schema.md) —
+  the tooling.
 - [docs/handoff-brief.md](docs/handoff-brief.md) — what the build session does,
   in order.
 - [docs/README.md](docs/README.md) — index.
