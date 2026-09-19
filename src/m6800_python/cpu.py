@@ -15,6 +15,7 @@ from m6800_python._loads import LoadMixin
 from m6800_python._shifts import ShiftMixin
 from m6800_python._stack import StackMixin
 from m6800_python._undocumented import POLICIES, policy_entry
+from m6800_python.state import CPUState
 
 
 class M6800(
@@ -65,6 +66,60 @@ class M6800(
             raise ValueError(f"undocumented= must be one of {POLICIES}, not {undocumented!r}")
         self.undocumented = undocumented
         self._table = cls._tables[undocumented]
+
+    def capture_state(self) -> CPUState:
+        """Return an immutable snapshot of all CPU-owned state.
+
+        No host reads, no side effects.  Memory and devices are the host's and
+        are not included (docs/cpu-state.md).
+        """
+        return CPUState(
+            a=self.A,
+            b=self.B,
+            x=self.X,
+            sp=self.SP,
+            pc=self.PC,
+            cc=self.CC,
+            irq=bool(self.irq),
+            nmi=bool(self.nmi),
+            irq2=getattr(self, "irq2", None),
+            nmi_previous=bool(self._nmi_previous),
+            nmi_pending=self._nmi_pending,
+            irq_inhibit=self._irq_inhibit,
+            waiting=self.waiting,
+            halted=self.halted,
+            opcode=self._opcode,
+            previous_opcode=self._previous_opcode,
+        )
+
+    def restore_state(self, state: CPUState) -> None:
+        """Restore a captured CPU state without touching the host.
+
+        Restoring the processor alone does not restore memory or devices.
+        """
+        if type(state) is not CPUState:
+            raise TypeError("state must be a CPUState")
+        if state.irq2 is not None and not hasattr(self, "irq2"):
+            raise ValueError("irq2 is an MC6801/6803 input; this CPU has none")
+        self.A, self.B, self.X, self.SP, self.PC, self.CC = (
+            state.a,
+            state.b,
+            state.x,
+            state.sp,
+            state.pc,
+            state.cc,
+        )
+        self.irq = state.irq
+        self.nmi = state.nmi
+        if hasattr(self, "irq2"):
+            self.irq2 = state.irq2
+        self._nmi_previous = state.nmi_previous
+        self._nmi_pending = state.nmi_pending
+        self._irq_inhibit = state.irq_inhibit
+        self.waiting = state.waiting
+        self.halted = state.halted
+        self._opcode = state.opcode
+        self._previous_opcode = state.previous_opcode
 
     def pulse_nmi(self) -> None:
         """Latch an NMI edge, to be taken at the next instruction boundary."""
