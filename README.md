@@ -61,6 +61,28 @@ m6800> break F044
 m6800> run 1000
 ```
 
+Or step through a whole board. `scripts/williams_debug.py` puts Robotron's sound
+board -- CPU, RAM, ROM and its PIA -- under the same debugger. MAME's captured
+sound commands arrive on schedule, or you can send one yourself. Watch the PIA,
+read the DAC bytes, and write what it played to a WAV file:
+
+```text
+$ python scripts/williams_debug.py --no-capture
+williams> break F044
+williams> run 1000
+stopped: breakpoint, 20 steps, 20 instructions, 81 cycles, PC=F044
+williams> sound DB
+command $DB at cycle 81 (0.000091 s); PIA IRQ=1
+williams> watch 0402 r
+williams> continue
+stopped: watchpoint, 4 steps, 3 instructions, 23 cycles, PC=FB17
+  r $0402 = $DB
+williams> unwatch 0402
+williams> run 400000
+williams> wav db.wav
+wrote 1.49 s to db.wav
+```
+
 The disassembler shares its opcode table with the core and agrees with MAME's
 own on all 4,172 distinct instructions of the five replayed games.
 [docs/debug-session.md](docs/debug-session.md) has the commands and the API;
@@ -190,6 +212,7 @@ python scripts/compare_mame_corpus.py      # rung 2: replay the corpus through t
 python scripts/replay_trace.py dragrace    # rung 3 (also kncljoe, kidniki, bublbobl, esclwrld);
                                            # with no trace, prints the MAME command that records it
 python scripts/williams_sound.py           # rung 4: the Robotron sound board against MAME
+python scripts/williams_debug.py           # the same board, in the debugger
 python scripts/crosscheck/sim68xx.py       # rung 5: three-way diff with sim68xx
 python scripts/crosscheck/n6800.py         # rung 5: against the n6800 RTL model
 scripts/mame_trace.sh dragrace 2 :maincpu  # a raw MAME trace; see docs/mame-oracle.md

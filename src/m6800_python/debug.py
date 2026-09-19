@@ -123,6 +123,13 @@ class DebugSession:
     disassembly.  ``track_accesses=True`` wraps the CPU's ``read_byte`` and
     ``write_byte`` callables to record every access and enable watchpoints;
     :meth:`close` puts the originals back.
+
+    The target may be a whole board rather than a bare CPU: an object whose
+    ``step()`` runs its devices around one CPU step and whose ``cpu``
+    attribute is the processor.  A board must bring its devices up to date
+    *after* the CPU step (deliver inputs, set the interrupt lines), so that
+    the state captured before the next step already shows what that step
+    will do.
     """
 
     def __init__(
@@ -140,10 +147,14 @@ class DebugSession:
         if type(history_limit) is not int or history_limit < 0:
             raise ValueError("history_limit must be a non-negative integer")
         self.target = target
+        #: The processor: the target itself, or the ``cpu`` a board target
+        #: carries.  Tracking wraps its bus callables, and the command
+        #: debugger sets its registers and interrupt lines.
+        self.cpu = getattr(target, "cpu", target)
         self.peek_byte = peek_byte
         self.history_limit = history_limit
-        self.part = getattr(target, "PART", 6800)
-        self.undocumented = getattr(target, "undocumented", "strict")
+        self.part = getattr(self.cpu, "PART", 6800)
+        self.undocumented = getattr(self.cpu, "undocumented", "strict")
         self.breakpoints: set[int] = set()
         self.watchpoints: dict[int, str] = {}  # address -> "r", "w" or "rw"
         self.total_steps = 0
@@ -162,7 +173,7 @@ class DebugSession:
         return self._originals is not None
 
     def _wrap_bus(self) -> None:
-        read, write = self.target.read_byte, self.target.write_byte
+        read, write = self.cpu.read_byte, self.cpu.write_byte
         self._originals = (read, write)
         self._accesses = []
         log = self._accesses
@@ -176,13 +187,13 @@ class DebugSession:
             log.append(("w", address, value))
             write(address, value)
 
-        self.target.read_byte = tracked_read
-        self.target.write_byte = tracked_write
+        self.cpu.read_byte = tracked_read
+        self.cpu.write_byte = tracked_write
 
     def close(self) -> None:
         """Stop tracking accesses and give the CPU its own bus callables back."""
         if self._originals is not None:
-            self.target.read_byte, self.target.write_byte = self._originals
+            self.cpu.read_byte, self.cpu.write_byte = self._originals
             self._originals = None
             self._accesses = None
 
