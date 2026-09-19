@@ -7,6 +7,7 @@ dependencies.  ``python -m m6800_python`` starts one on a ROM or binary
 """
 
 import shlex
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from typing import ClassVar, TextIO
 
@@ -133,10 +134,23 @@ def format_run(result: RunResult) -> tuple[str, ...]:
 class CommandDebugger:
     """Parse and execute debugger commands against a :class:`DebugSession`."""
 
-    def __init__(self, session: DebugSession) -> None:
+    def __init__(
+        self,
+        session: DebugSession,
+        *,
+        commands: Mapping[str, tuple[Callable[[list[str]], Iterable[str]], str]] | None = None,
+    ) -> None:
+        """``commands`` adds host commands: ``name -> (handler, help line)``.
+        A handler takes the argument words, returns printable lines, and
+        raises :class:`CommandError` for bad input.  Host commands may not
+        replace built-in ones."""
         if type(session) is not DebugSession:
             raise TypeError("session must be a DebugSession")
         self.session = session
+        self.host_commands = dict(commands or {})
+        clashes = sorted(set(self.host_commands) & set(self._COMMANDS))
+        if clashes:
+            raise ValueError(f"host commands clash with built-ins: {', '.join(clashes)}")
 
     def execute(self, command: str) -> CommandResult:
         """Execute one command and return deterministic printable lines."""
@@ -149,9 +163,11 @@ class CommandDebugger:
         name, *arguments = words
         name = name.lower()
         handler = self._COMMANDS.get(name)
-        if handler is None:
-            raise CommandError(f"unknown command: {name} (try help)")
-        return handler(self, name, arguments)
+        if handler is not None:
+            return handler(self, name, arguments)
+        if name in self.host_commands:
+            return CommandResult(tuple(self.host_commands[name][0](arguments)))
+        raise CommandError(f"unknown command: {name} (try help)")
 
     def interact(self, input_stream: TextIO, output_stream: TextIO, *, prompt: str = "") -> None:
         """Run a line-oriented loop over the given streams until quit or end of input."""
@@ -180,7 +196,8 @@ class CommandDebugger:
 
     def _help(self, name, arguments):
         _arity(name, arguments, 0)
-        return CommandResult(_HELP)
+        extra = tuple(line for _, line in self.host_commands.values())
+        return CommandResult(_HELP + (("Host commands:", *extra) if extra else ()))
 
     def _registers(self, name, arguments):
         _arity(name, arguments, 0)
@@ -316,7 +333,7 @@ class CommandDebugger:
         if register not in _REGISTERS or (register == "D" and self.session.part == 6800):
             raise CommandError(f"no register {register} on the MC{self.session.part}")
         value = parse_number(arguments[1], register, maximum=_REGISTERS[register])
-        cpu = self.session.target
+        cpu = self.session.cpu
         if register == "D":
             cpu.A, cpu.B = value >> 8, value & 0xFF
         elif register == "CC":
@@ -330,17 +347,17 @@ class CommandDebugger:
         level = arguments[0].lower()
         if level not in ("on", "off"):
             raise CommandError("irq takes on or off")
-        self.session.target.irq = level == "on"
+        self.session.cpu.irq = level == "on"
         return CommandResult((f"IRQ line {'asserted' if level == 'on' else 'released'}",))
 
     def _nmi(self, name, arguments):
         _arity(name, arguments, 0)
-        self.session.target.pulse_nmi()
+        self.session.cpu.pulse_nmi()
         return CommandResult(("NMI edge latched; taken at the next step",))
 
     def _reset(self, name, arguments):
         _arity(name, arguments, 0)
-        self.session.target.reset()
+        self.session.cpu.reset()
         return CommandResult(format_state(self.session.target.capture_state(), self.session.part))
 
     def _peek(self) -> ByteReader:
