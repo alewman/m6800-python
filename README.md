@@ -12,9 +12,9 @@ because for this family almost nothing can be** (see "Oracles" below).
 `m6800-python` is a readable, dependency-free instruction core
 for the Motorola **6800 family** — MC6800, MC6802 and MC6808, which share one
 instruction set, and the MC6801/MC6803 superset — built to the same embedding
-contract as [z80-python](https://github.com/alewman/z80-python) and
-6502-python: the host owns memory and I/O and supplies `read_byte` /
-`write_byte`; the core owns registers, flags and the instruction-boundary
+contract as [z80-python](https://github.com/alewman/z80-python) (0.4.0 and
+later, whose `Z80CPU(read_byte, write_byte, ...)` takes its bus the same way):
+the host owns memory and I/O and supplies `read_byte` / `write_byte`; the core owns registers, flags and the instruction-boundary
 lifecycle (RESET, NMI, IRQ, SWI, WAI); `step()` executes one instruction or one
 interrupt entry and returns its cycle count; the host schedules everything
 else.

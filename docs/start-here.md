@@ -508,7 +508,8 @@ still the only halt instruction.
 
 ## The embedding contract
 
-Same as `z80-python` and `6502-python`. The host owns memory and I/O
+Same as `z80-python` 0.4.0 and later (6502-python passes a `MemoryBus`
+object instead of two callables). The host owns memory and I/O
 (`src/m6800_python/cpu.py`; `scripts/williams_sound.py` is a complete host):
 
 ```python
