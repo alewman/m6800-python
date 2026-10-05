@@ -13,7 +13,6 @@
 | [mame-oracle.md](mame-oracle.md) | MAME 0.285 headless tracing: the working command line, the Lua script, the register names, the gotchas confirmed and corrected, and three verified runs — Drag Race's MC6800, Robotron's MC6808 sound board (and how it was driven out of its self-loop), Knuckle Joe's MC6803 |
 | [conformance.md](conformance.md) | Manifests, the shared host, the reference traces and the differ: how another core proves it is this one |
 | [api-stability.md](api-stability.md) | What the public API promises, what may still change (the `[unverified]` cycle counts), and the versioning policy |
-| [handoff-polish.md](handoff-polish.md) | The polish brief written after the 2026-09-18 review against z80-python: eight items in order (reset/trap nits and VMA note, package hygiene, CI, the conformance kit, a certified n6800 bus-order fixture, benchmarks; a 6803 timer host and a functional test program as stretch), each with an acceptance test |
 | [handoff-brief.md](handoff-brief.md) | The brief a build session starts from: context, task, seven milestones each with an acceptance test in oracle-tier order, constraints, open questions, what done looks like |
 
 Scripts these pages refer to:
