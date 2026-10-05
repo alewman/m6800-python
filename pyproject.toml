@@ -11,7 +11,29 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }
 authors = [{ name = "alewman" }]
+keywords = ["6800", "6802", "6803", "6808", "motorola", "cpu", "emulator", "instruction-set"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: System :: Emulators",
+]
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/alewman/m6800-python"
+Repository = "https://github.com/alewman/m6800-python"
+Changelog = "https://github.com/alewman/m6800-python/blob/main/CHANGELOG.md"
+Issues = "https://github.com/alewman/m6800-python/issues"
 
 [project.optional-dependencies]
 # ruff is pinned: `ruff format --check` must see the formatter the tree was
