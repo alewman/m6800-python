@@ -143,3 +143,17 @@ def test_measured_is_strict_on_the_6803() -> None:
 def test_unknown_policy_is_refused() -> None:
     with pytest.raises(ValueError):
         make("6800", [], undocumented="guess")
+
+
+def test_a_trapped_opcode_leaves_the_state_untouched(part: str) -> None:
+    # _undocumented.py promises "the CPU state unchanged, PC still pointing at
+    # the opcode": step() shifts the opcode history before dispatch, so it has
+    # to put it back when the trap propagates.
+    trapped = 0x00  # unassigned on every part in this family
+    cpu, bus = make(part, [0x01, trapped])  # NOP, then the trap
+    cpu.step()
+    before = cpu.capture_state()
+    with pytest.raises(UndocumentedOpcode) as raised:
+        cpu.step()
+    assert raised.value.address == 0x1001
+    assert cpu.capture_state() == before

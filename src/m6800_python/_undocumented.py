@@ -100,6 +100,8 @@ def _trap(opcode: int, part: str) -> Callable:
     def undocumented(self) -> None:
         address = (self.PC - 1) & 0xFFFF
         self.PC = address
+        # step() puts the opcode history back when this propagates, because
+        # this policy promises the CPU state is left untouched.
         raise UndocumentedOpcode(opcode, address, part)
 
     return undocumented

@@ -37,7 +37,7 @@ formulae); MCSDD's "MC6800 Microprocessor" data sheet, the
 The MC6809 shares the "68" family name and a rough philosophy and is
 otherwise a **different, binary-incompatible CPU** — different opcode map,
 different register set, different flags word; 6800 object code does not run on
-it. `/data/emu/m6809-python` is its own repository; nothing in this one
+it. The 6809 has a repository of its own; nothing in this one
 applies there and nothing there applies here.
 
 ## Scope
@@ -395,8 +395,10 @@ order ICF > OCF > TOF > SCI, all of them gated by the I bit and each by its
 own enable bit in the timer/SCI control registers (M6801RM §4.4). A core that
 only implements the instruction set does not need them; the **host** owns the
 timer and the SCI and raises the request. This project's contract puts them on
-the host side: `m6800-python` will expose an interrupt-request input per
-vector and let the host decide when to assert it.
+the host side, with one attribute rather than one input per vector: `M6803.irq2`
+holds the address of the highest-priority pending peripheral vector, or `None`,
+and the host sets it when its timer or SCI decides to interrupt (see "The
+embedding contract" above, and `cpu.py`).
 
 ### The stack frame
 
@@ -513,14 +515,14 @@ object instead of two callables). The host owns memory and I/O
 (`src/m6800_python/cpu.py`; `scripts/williams_sound.py` is a complete host):
 
 ```python
-from m6800_python import M6800, M6803   # also M6802/M6808 (= M6800), M6801 (= M6803)
+from m6800_python import M6800, M6803  # also M6802/M6808 (= M6800), M6801 (= M6803)
 
-cpu = M6800(bus.read, bus.write)          # read_byte(address) -> int, write_byte(address, value)
-cpu.reset()                               # I set, other flags clear, PC from $FFFE
+cpu = M6800(bus.read, bus.write)  # read_byte(address) -> int, write_byte(address, value)
+cpu.reset()  # I set, other flags clear, PC from $FFFE
 while True:
-    cycles = cpu.step()                   # one instruction, or one interrupt entry
-    bus.tick(cycles)                      # host advances timers, video, PIAs
-    cpu.irq = bus.irq_level               # sampled at the next instruction boundary
+    cycles = cpu.step()  # one instruction, or one interrupt entry
+    bus.tick(cycles)  # host advances timers, video, PIAs
+    cpu.irq = bus.irq_level  # sampled at the next instruction boundary
 ```
 
 - `step()` executes exactly one instruction **or** one interrupt-entry

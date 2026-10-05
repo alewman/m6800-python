@@ -268,3 +268,23 @@ def test_6803_irq2_vectors_and_priority() -> None:
     cpu.irq = True  # IRQ1 outranks the on-chip sources
     cpu.step()
     assert cpu.PC == 0x4800
+
+
+def test_reset_forgets_the_opcode_history_so_cli_keeps_its_delay(part: str) -> None:
+    # _core.py assumes an odd opcode at startup so that a CLI first thing holds
+    # a pending IRQ off for one instruction (APPS p. A-13, Q15; M6801RM 5.4.1.1).
+    # reset() must restore that, or an even opcode executed before the reset
+    # makes the MC6800 take the IRQ immediately after the CLI.
+    cpu, bus = make(part, [0x86, 0x00])  # LDAA #$00: opcode $86, even
+    bus.set_word(0xFFFE, 0x2000)
+    bus.set_word(0xFFF8, 0x4000)
+    cpu.step()
+    cpu.reset()
+    assert cpu.PC == 0x2000
+    bus.load(0x2000, [0x0E, 0x01, 0x01])  # CLI; NOP; NOP
+    cpu.PC = 0x2000
+    cpu.SP = 0x01FF
+    cpu.irq = True
+    assert cpu.step() == 2  # CLI
+    assert cpu.step() == 2  # the NOP runs first: the delay survived the reset
+    assert cpu.step() == 12 and cpu.PC == 0x4000
