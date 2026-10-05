@@ -14,7 +14,9 @@ authors = [{ name = "alewman" }]
 dependencies = []
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "ruff>=0.15"]
+# ruff is pinned: `ruff format --check` must see the formatter the tree was
+# formatted with, or a ruff release fails CI on an unchanged tree.
+dev = ["pytest>=8", "ruff==0.16.8"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/m6800_python"]
