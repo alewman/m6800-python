@@ -11,6 +11,7 @@
 | [cpu-state.md](cpu-state.md) | `capture_state()` / `restore_state()` and what the state holds |
 | [trace-schema.md](trace-schema.md) | The JSON Lines trace format for comparing this core with a port |
 | [mame-oracle.md](mame-oracle.md) | MAME 0.285 headless tracing: the working command line, the Lua script, the register names, the gotchas confirmed and corrected, and three verified runs — Drag Race's MC6800, Robotron's MC6808 sound board (and how it was driven out of its self-loop), Knuckle Joe's MC6803 |
+| [api-stability.md](api-stability.md) | What the public API promises, what may still change (the `[unverified]` cycle counts), and the versioning policy |
 | [handoff-brief.md](handoff-brief.md) | The brief a build session starts from: context, task, seven milestones each with an acceptance test in oracle-tier order, constraints, open questions, what done looks like |
 
 Scripts these pages refer to:
