@@ -108,6 +108,26 @@ and [docs/trace-schema.md](docs/trace-schema.md) the rest.
 has been generated); `python -m pytest -m slow` replays the MAME traces and
 the Williams board of rungs 3 and 4, where they have been recorded locally. Details, and every command: [docs/validation.md](docs/validation.md).
 
+### Proving another core is this one
+
+A manifest fixes everything about a run — the part, the undocumented-opcode
+policy, memory, the initial state, when the interrupt inputs change, when to
+stop — so two cores given the same one see the same machine, and any difference
+between their traces is a difference between the CPUs:
+
+```text
+python -m m6800_python.conformance trace examples/conformance/daa.json --out mine.jsonl
+python -m m6800_python.conformance diff examples/conformance/daa.json theirs.jsonl
+```
+
+`diff` names the first boundary and field that differ, and `checkpoints` splits
+a long run into segments that can be diffed in parallel.
+`examples/conformance/` ships a manifest and reference trace for each decision
+a port is likeliest to get wrong — the MC6800's `CLI` delay, `WAI` and its
+wake-up costs, `CPX` on each part, `DAA`'s table, the stack frames — and
+[docs/conformance.md](docs/conformance.md) is the contract, including the point
+that matching the registers while missing `irq_inhibit` is not equivalence.
+
 ## Scope
 
 | Part | What differs | Here |

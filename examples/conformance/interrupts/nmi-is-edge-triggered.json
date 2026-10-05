@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "name": "nmi-is-edge-triggered",
+  "part": "6800",
+  "undocumented": "strict",
+  "host": "flat",
+  "memory": [
+    {
+      "address": 4096,
+      "data": "01010101013e"
+    },
+    {
+      "address": 8192,
+      "data": "3b"
+    },
+    {
+      "address": 8448,
+      "data": "3b"
+    },
+    {
+      "address": 8704,
+      "data": "3b"
+    },
+    {
+      "address": 65520,
+      "data": "22001000100010002000200021001000"
+    }
+  ],
+  "initial": {
+    "a": 0,
+    "b": 0,
+    "x": 0,
+    "sp": 511,
+    "pc": 4096,
+    "cc": 208,
+    "irq": false,
+    "nmi": false,
+    "irq2": null,
+    "nmi_previous": false,
+    "nmi_pending": false,
+    "irq_inhibit": false,
+    "waiting": false,
+    "halted": false,
+    "opcode": 1,
+    "previous_opcode": 1
+  },
+  "events": [
+    {
+      "at_step": 0,
+      "kind": "nmi"
+    },
+    {
+      "at_step": 3,
+      "kind": "nmi_clear"
+    },
+    {
+      "at_step": 4,
+      "kind": "nmi"
+    }
+  ],
+  "stop": {
+    "max_steps": 400,
+    "at_pc": [],
+    "on_wait": true,
+    "on_hcf": true
+  }
+}

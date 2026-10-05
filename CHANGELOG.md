@@ -8,6 +8,15 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **The conformance kit**, `m6800_python.conformance` and
+  `python -m m6800_python.conformance`: a manifest fixes a run (part,
+  undocumented policy, memory, initial state, interrupt events, stop rule), so
+  two cores given one see the same machine and any difference between their
+  traces is a difference between the CPUs. `trace`, `diff` and `checkpoints`,
+  with nineteen fixtures in `examples/conformance/` covering the MC6800 CLI
+  delay, WAI, CPX on each part, DAA's table, the stack frames, the measured
+  undocumented opcodes and HCF. docs/conformance.md is the contract.
+
 - CI gained a `package` job: it builds the wheel and sdist, installs the wheel,
   runs `scripts/smoke_installed_package.py` from outside the source tree, and
   checks that `py.typed` is in the wheel.
