@@ -150,7 +150,7 @@ def test_a_trapped_opcode_leaves_the_state_untouched(part: str) -> None:
     # the opcode": step() shifts the opcode history before dispatch, so it has
     # to put it back when the trap propagates.
     trapped = 0x00  # unassigned on every part in this family
-    cpu, bus = make(part, [0x01, trapped])  # NOP, then the trap
+    cpu, _bus = make(part, [0x01, trapped])  # NOP, then the trap
     cpu.step()
     before = cpu.capture_state()
     with pytest.raises(UndocumentedOpcode) as raised:
