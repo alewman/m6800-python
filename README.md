@@ -1,5 +1,8 @@
 # m6800-python
 
+[![CI](https://github.com/alewman/m6800-python/actions/workflows/ci.yml/badge.svg)](https://github.com/alewman/m6800-python/actions/workflows/ci.yml)
+[![Oracles](https://github.com/alewman/m6800-python/actions/workflows/oracles.yml/badge.svg)](https://github.com/alewman/m6800-python/actions/workflows/oracles.yml)
+
 **Status (2026-09-18): the core exists and passes all seven rungs of the
 validation ladder** — the Motorola manuals; a generated MAME corpus; 17.6
 million instructions of real arcade and pinball code replayed against MAME; a Williams
@@ -181,6 +184,25 @@ against silicon.
 [docs/validation.md](docs/validation.md) has the full inventory, the hashes and
 the seven-rung plan.
 
+### CI coverage
+
+The two badges cover different things, and neither covers everything. A green
+**CI** badge would not mean the oracle rungs passed, so they are separate
+rather than implied:
+
+| Badge | Runs | When |
+| --- | --- | --- |
+| **CI** | the fast suite (the manual-derived tests of rung 1, the tooling tests), Ruff check and format, the debugger front end, and a wheel build with an installed-API smoke test, on CPython 3.11-3.14 and PyPy 3.11 | every push and pull request |
+| **Oracles** | rung 2: MAME 0.285's own 6800 handlers built from the hash-pinned sources and compared over 256,000 generated cases per part | weekly, and on demand |
+
+**Rungs 3 to 7 are certified locally, not in CI**, because no workflow can
+fetch what they need: the trace replays and the Williams sound board need MAME
+0.285 and its ROM sets (`$ROMPATH`), and the n6800 and sim68xx cross-checks
+need a Python 3.9 environment with amaranth and a C build. Their commands,
+numbers and dates are in
+[the validation record](docs/validation.md#the-record-so-far-2026-09-18);
+treat that, not a badge, as the citation for those rungs.
+
 ## Documents
 
 - [docs/start-here.md](docs/start-here.md) — the primer and the complete
@@ -216,6 +238,7 @@ python scripts/williams_debug.py           # the same board, in the debugger
 python scripts/crosscheck/sim68xx.py       # rung 5: three-way diff with sim68xx
 python scripts/crosscheck/n6800.py         # rung 5: against the n6800 RTL model
 scripts/mame_trace.sh dragrace 2 :maincpu  # a raw MAME trace; see docs/mame-oracle.md
+python scripts/smoke_installed_package.py  # the installed wheel's public API, run by CI
 ```
 
 Nothing they fetch or produce is committed: `reference/`, `tests/vectors/`,
