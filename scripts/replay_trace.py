@@ -30,6 +30,7 @@ emulator-derived** -- agreement here is agreement with MAME on real code.
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import sys
 import zipfile
@@ -44,7 +45,9 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from m6800_python import M6800, M6803  # noqa: E402
 
-ROMPATH = Path("/data/emu/source/myrient.erista.me/files/MAME/ROMs (non-merged)")
+# MAME's ROM directory: $ROMPATH (or $MAME_ROMPATH), else the working directory.
+# Sets are read in place and never copied into this repository.
+ROMPATH = Path(os.environ.get("ROMPATH") or os.environ.get("MAME_ROMPATH") or ".")
 
 
 @dataclass

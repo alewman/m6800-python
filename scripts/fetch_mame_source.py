@@ -1,11 +1,11 @@
 """Fetch MAME's 6800 CPU core source at the pinned release, with hashes.
 
-The installed emulator here is MAME **0.285** (`/usr/games/mame -version`), and
-0.285 is what every trace in docs/mame-oracle.md was taken with, so 0.285 is
-what the documents quote.  The copy of MAME's source that happens to be on this
-machine (`/home/aubrey/mame-master`) is **0.261** and its 6800 core differs in
-ways that matter — the `CLI`/`SEI`/`TAP` interrupt-delay handling was rewritten
-between the two releases — so the documents must not be derived from it.
+Every trace in docs/mame-oracle.md was taken with MAME **0.285**, so 0.285 is
+what the documents quote.  Read the core from this script's download, not from
+whatever MAME source tree happens to sit on the machine: the one here was
+**0.261**, whose 6800 core differs in ways that matter — the `CLI`/`SEI`/`TAP`
+interrupt-delay handling was rewritten between the two releases — so a document
+derived from it would be wrong.
 
 This script downloads the six files of the core from the `mame0285` tag into a
 gitignored directory and verifies each SHA-256.  MAME's CPU cores carry

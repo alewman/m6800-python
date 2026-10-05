@@ -22,6 +22,7 @@ are modelled.
 
 from __future__ import annotations
 
+import os
 import sys
 import zipfile
 from collections import deque
@@ -32,7 +33,9 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from m6800_python import M6808  # noqa: E402
 
-ROMPATH = Path("/data/emu/source/myrient.erista.me/files/MAME/ROMs (non-merged)")
+# MAME's ROM directory: $ROMPATH (or $MAME_ROMPATH), else the working directory.
+# Sets are read in place and never copied into this repository.
+ROMPATH = Path(os.environ.get("ROMPATH") or os.environ.get("MAME_ROMPATH") or ".")
 ROBOTRON_ZIP = ROMPATH / "robotron.zip"
 ROBOTRON_SOUND_ROM = "video_sound_rom_3_std_767.ic12"
 CAPTURE = ROOT / "mame-work" / "williams" / "robotron.capture"

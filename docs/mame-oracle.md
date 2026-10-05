@@ -14,12 +14,12 @@ Everything on this page was run on 2026-09-12 with the commands as committed.
 ## What is installed
 
 - MAME **0.285** at `/usr/games/mame` (`mame -version` → `0.285 (unknown)`).
-- ROM sets under `/data/emu/source/myrient.erista.me/files/MAME/ROMs (non-merged)/`,
+- ROM sets under the directory `$ROMPATH` names (non-merged here),
   used in place with `-rompath`. Nothing is copied, and no ROM, trace or
   `error.log` is committed (`.gitignore` covers `*.trace`, `error.log`,
   `mame-work/`, `mame-home/`, `reference/`).
-- **A MAME source tree also exists on this machine, at
-  `/home/aubrey/mame-master`, and it is version 0.261, not 0.285.** Its 6800
+- **Check the version of any MAME source tree before quoting it.** The one on
+  the machine these documents were written on was 0.261, not 0.285. Its 6800
   core differs from the installed binary's in the `CLI`/`SEI`/`TAP`
   interrupt-delay handling and in the illegal-opcode cycle sentinel. Do not
   quote it. `scripts/fetch_mame_source.py` fetches the six files of the 0.285
@@ -49,7 +49,7 @@ only its sound CPU is in scope here.
 ```sh
 M6800_TRACE_TAG=":maincpu" M6800_TRACE_FILE="dragrace.trace" \
 /usr/games/mame dragrace \
-  -rompath "/data/emu/source/myrient.erista.me/files/MAME/ROMs (non-merged)" \
+  -rompath "$ROMPATH" \
   -homepath "$PWD/mame-home" \
   -video none -sound none -nothrottle -noreadconfig -skip_gameinfo \
   -debug -debugger none -log \

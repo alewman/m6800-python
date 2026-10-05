@@ -12,8 +12,8 @@ GAME=${1:-dragrace}
 SECONDS_TO_RUN=${2:-2}
 TAG=${3:-:maincpu}
 WORK=${4:-mame-work}
-MAME=${MAME:-/usr/games/mame}
-ROMPATH=${ROMPATH:-"/data/emu/source/myrient.erista.me/files/MAME/ROMs (non-merged)"}
+MAME=${MAME:-mame}
+ROMPATH=${ROMPATH:-${MAME_ROMPATH:-.}}
 SCRIPT=$(cd "$(dirname "$0")" && pwd)/mame_trace.lua
 
 mkdir -p "$WORK"

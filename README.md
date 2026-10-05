@@ -20,13 +20,13 @@ interrupt entry and returns its cycle count; the host schedules everything
 else.
 
 ```python
-from m6800_python import M6800, M6803   # also M6802, M6808 (= M6800), M6801 (= M6803)
+from m6800_python import M6800, M6803  # also M6802, M6808 (= M6800), M6801 (= M6803)
 
 memory = bytearray(0x10000)
 cpu = M6800(memory.__getitem__, memory.__setitem__)
-cpu.reset()                      # I set, PC from $FFFE
-cycles = cpu.step()              # one instruction or one interrupt entry
-cpu.irq = True                   # level-sensitive; cpu.nmi is edge-triggered
+cpu.reset()  # I set, PC from $FFFE
+cycles = cpu.step()  # one instruction or one interrupt entry
+cpu.irq = True  # level-sensitive; cpu.nmi is edge-triggered
 print(cpu.A, cpu.B, cpu.X, cpu.SP, cpu.PC, cpu.CC)
 ```
 
@@ -115,7 +115,7 @@ the Williams board of rungs 3 and 4, where they have been recorded locally. Deta
 | **MC6801 / MC6803** | Superset: the 16-bit **D** accumulator and eleven new mnemonics — `ABX`, `ADDD`, `ASLD`, `BRN`, `LDD`, `LSRD`, `MUL`, `PSHX`, `PULX`, `STD`, `SUBD`, plus `JSR` direct — and **72 shared opcodes that run faster** (three `CPX` forms run slower). The 6801 also carries an on-chip timer, an SCI and four I/O ports | instruction set and cycle counts in scope; **the timer, SCI and ports belong to the host, not the core** |
 | HD6301 / HD63701 / HD6303 | Hitachi supersets: `XGDX`, `SLP`, `AIM`/`OIM`/`EIM`/`TIM`, an illegal-opcode trap through `$FFEE` | **out of scope**, noted |
 | NSC8105 / MS2010-A | An unlicensed clone with a **scrambled opcode map** | **out of scope**, noted |
-| **MC6805**, **MC6809** | Different cores despite the family name; the 6809 is binary-incompatible and has its own repository (`/data/emu/m6809-python`) | **out of scope** |
+| **MC6805**, **MC6809** | Different cores despite the family name; the 6809 is binary-incompatible and has a repository of its own | **out of scope** |
 
 [docs/start-here.md](docs/start-here.md) has the full comparison and the
 complete opcode table for both instruction sets.
@@ -221,8 +221,8 @@ scripts/mame_trace.sh dragrace 2 :maincpu  # a raw MAME trace; see docs/mame-ora
 Nothing they fetch or produce is committed: `reference/`, `tests/vectors/`,
 `third_party/`, `*.trace`, `error.log`, `mame-work/` and `mame-home/` are
 gitignored. ROMs are
-read in place from `/data/emu/source/myrient.erista.me/files/MAME/ROMs (non-merged)/`
-and are never copied.
+read in place from the directory `$ROMPATH` names (the scripts also accept
+`$MAME_ROMPATH`, and `$MAME` locates the binary) and are never copied.
 
 ## What this repository has *not* done
 

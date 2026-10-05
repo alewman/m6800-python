@@ -1,8 +1,13 @@
-# Validation plan and oracle inventory
+# Validation: the claim, the oracle inventory, and the record
 
-## The claim this project will be able to make, and the one it cannot
+The core exists and all seven rungs pass; the measured record is in
+[The record so far](#the-record-so-far-2026-09-18), and this page keeps the
+inventory that planned it, because which oracles exist for this family (and
+which do not) is the reason the claim below is shaped as it is.
 
-When the core exists, the strongest honest claim available is:
+## The claim this project makes, and the one it cannot
+
+The strongest honest claim available is:
 
 > a pure-Python MC6800/6802/6808 and MC6801/6803 instruction core whose
 > semantics, flags and cycle counts follow the Motorola manuals; which agrees
@@ -182,7 +187,7 @@ MC6800's `WAI` exit and `CLI` rule and documents the in-instruction races in
 
 - Installed at `/usr/games/mame`, version string `0.285 (unknown)`.
 - Source: **not** the 0.261 tree that happens to be at
-  `/home/aubrey/mame-master`. `scripts/fetch_mame_source.py` fetches the six
+  an older MAME source tree on the machine. `scripts/fetch_mame_source.py` fetches the six
   files of the 0.285 core from the `mame0285` tag and verifies them:
 
 | File | Bytes | SHA-256 |
