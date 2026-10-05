@@ -27,3 +27,19 @@ jobs:
       - run: python -m ruff format --check .
       # The debugger front end, end to end on a program the repository carries.
       - run: python -m m6800_python --help
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade build
+      - run: python -m build --wheel --sdist
+      - run: python -m pip install --force-reinstall dist/*.whl
+      - name: Smoke-test the installed public API
+        working-directory: ${{ runner.temp }}
+        run: python ${{ github.workspace }}/scripts/smoke_installed_package.py
+      - name: The wheel carries the typing marker
+        run: python -c "import zipfile, glob; names = zipfile.ZipFile(glob.glob('dist/*.whl')[0]).namelist(); assert 'm6800_python/py.typed' in names, names"

@@ -6,6 +6,16 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- CI gained a `package` job: it builds the wheel and sdist, installs the wheel,
+  runs `scripts/smoke_installed_package.py` from outside the source tree, and
+  checks that `py.typed` is in the wheel.
+- An `Oracles` workflow, weekly and on demand, runs rung 2 in CI: MAME 0.285's
+  own 6800 handlers, built from the hash-pinned sources, compared over 256,000
+  generated cases per part. Rungs 3 to 7 still cannot run in CI, and the README
+  says which badge covers what.
+
 ## [0.1.0] — 2026-10-05
 
 The first release: the core, its tooling, and the record of what it is checked

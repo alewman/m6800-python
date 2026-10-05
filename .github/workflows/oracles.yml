@@ -1,0 +1,50 @@
+# The oracle gate CI can run: the generated MAME 0.285 single-step corpus
+# (rung 2, emulator-derived). It builds MAME's own 6800 handlers from the
+# hash-pinned sources and compares 256,000 cases per part, so it needs g++ and
+# a few minutes, which is why it is weekly rather than per push.
+#
+# Left out, for reasons no workflow can fix:
+#   * the trace replays and the Williams sound board (rungs 3 and 4) need MAME
+#     0.285 and its ROM sets, which are not ours to fetch; they are run locally
+#     and recorded, with their numbers, in docs/validation.md;
+#   * the n6800 and sim68xx cross-checks (rung 5) need Python 3.9 with amaranth
+#     through uv, and a C build; same record.
+name: Oracles
+
+on:
+  schedule:
+    - cron: "23 6 * * 1"   # Mondays, 06:23 UTC
+  workflow_dispatch:
+
+jobs:
+  corpus:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e ".[dev]"
+
+      # Keyed on the SHA-256 of m6800.cpp and 6800ops.hxx recorded in
+      # docs/validation.md, so the cache is invalidated by repinning MAME and
+      # by nothing else.
+      - name: Restore the generated corpus
+        id: corpus
+        uses: actions/cache@v4
+        with:
+          path: tests/vectors
+          key: mame0285-corpus-974d0c20-f4c692a1
+
+      - name: Fetch MAME 0.285's 6800 core, SHA-256 verified
+        if: steps.corpus.outputs.cache-hit != 'true'
+        run: python scripts/fetch_mame_source.py
+
+      - name: Generate the corpus from MAME's own handlers
+        if: steps.corpus.outputs.cache-hit != 'true'
+        run: python scripts/mame_corpus.py generate
+
+      - name: 256,000 cases per part, no unexplained disagreement
+        run: python -m pytest tests/test_mame_corpus.py -q
