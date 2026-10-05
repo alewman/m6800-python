@@ -26,6 +26,12 @@ The supported surface is exactly `__all__` in `src/m6800_python/__init__.py`:
   (`add_watchpoint`, `StopReason.WATCHPOINT`, `RunResult.hits`);
 - **`CommandDebugger`** with `CommandResult` and `CommandError`, the
   `python -m m6800_python` command line, and `console.parse_number`;
+- **`m6800_python.conformance`**: `Manifest` and its parts (`MemorySegment`,
+  `Event`, `StopRule`), `ConformanceHost`, `TraceRun`, `trace_manifest`,
+  `diff_manifest`, `write_checkpoints`, `manifest_to_dict`,
+  `manifest_from_dict`, `load_manifest`, the manifest JSON form
+  (`MANIFEST_SCHEMA_VERSION`) and the `python -m m6800_python.conformance`
+  command line, all described in [conformance.md](conformance.md);
 - **traces**: `TRACE_SCHEMA_VERSION`, `read_trace`, `write_trace`,
   `step_record_to_dict`, `step_record_from_dict`, `iter_session_steps`,
   `compare_step_records`, `iter_trace_divergences`, `first_trace_divergence`,
