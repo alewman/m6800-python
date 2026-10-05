@@ -14,7 +14,7 @@ from m6800_python._interrupts import VECTOR_IRQ, VECTOR_NMI, InterruptMixin
 from m6800_python._loads import LoadMixin
 from m6800_python._shifts import ShiftMixin
 from m6800_python._stack import StackMixin
-from m6800_python._undocumented import POLICIES, policy_entry
+from m6800_python._undocumented import POLICIES, UndocumentedOpcode, policy_entry
 from m6800_python.state import CPUState
 
 
@@ -156,13 +156,21 @@ class M6800(
 
         opcode = self.read_byte(self.PC)
         self.PC = (self.PC + 1) & 0xFFFF
-        self._previous_opcode = self._opcode
+        previous, current = self._previous_opcode, self._opcode
+        self._previous_opcode = current
         self._opcode = opcode
         handler, ea, cycles = self._table[opcode]
-        if ea is None:
-            handler(self)
-        else:
-            handler(self, ea(self))
+        try:
+            if ea is None:
+                handler(self)
+            else:
+                handler(self, ea(self))
+        except UndocumentedOpcode:
+            # The strict and measured policies promise that a trapped opcode
+            # leaves the CPU exactly as it was, so put the history back. The
+            # try costs nothing when nothing raises (zero-cost exceptions).
+            self._previous_opcode, self._opcode = previous, current
+            raise
         return cycles
 
 

@@ -45,7 +45,9 @@ class InterruptMixin:
         The manuals specify only I and PC ("during the restart routine, the
         interrupt mask bit is set", MCSDD's MC6800 data sheet, p. 26).  A, B, X
         and SP are left as they were, and H N Z V C are cleared, as MAME does,
-        so that traces can be compared.  Reset also leaves WAI and HCF.
+        so that traces can be compared.  Reset also leaves WAI and HCF, and
+        forgets the opcode history: nothing ran before a reset, so a CLI
+        immediately after one keeps its one-instruction delay (_core.py).
         """
         self.CC = CC_FIXED | I
         self.waiting = False
@@ -53,6 +55,8 @@ class InterruptMixin:
         self._irq_inhibit = False
         self._nmi_pending = False
         self._nmi_previous = self.nmi
+        self._opcode = 0x01
+        self._previous_opcode = 0x01
         self.PC = self._read_word(VECTOR_RESET)
 
     #: MC6800 only: whether CLI holds off a pending IRQ depends on the opcode
