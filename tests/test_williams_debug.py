@@ -22,7 +22,11 @@ import williams_debug  # noqa: E402
 from m6800_python import BoundaryKind, CommandDebugger, DebugSession, StopReason  # noqa: E402
 
 if not williams_board.ROBOTRON_ZIP.exists():
-    pytest.skip("no robotron.zip", allow_module_level=True)
+    pytest.skip(
+        f"no robotron.zip at {williams_board.ROBOTRON_ZIP}; set $ROMPATH to MAME's ROM "
+        "directory (the set is read in place)",
+        allow_module_level=True,
+    )
 
 ROM = williams_board.robotron_rom()
 
