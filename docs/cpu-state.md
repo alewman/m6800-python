@@ -30,7 +30,7 @@ unchanged or restored alongside it, and is not a whole-machine save state.
 
 ```python
 before = cpu.capture_state()
-saved = bytes(memory)       # the host's part
+saved = bytes(memory)  # the host's part
 
 cpu.step()
 

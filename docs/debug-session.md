@@ -73,8 +73,7 @@ after a breakpoint hit continues.
 ## DebugSession
 
 ```python
-session = DebugSession(cpu, peek_byte=memory.__getitem__, history_limit=256,
-                       track_accesses=True)
+session = DebugSession(cpu, peek_byte=memory.__getitem__, history_limit=256, track_accesses=True)
 session.add_breakpoint(0xFB11)
 result = session.run(max_steps=1_000_000, max_cycles=900_000)
 print(result.reason, result.state.pc)
@@ -118,7 +117,7 @@ step will do, so `next_boundary` and the records' boundary kinds stay exact.
 def step(self):
     cycles = self.cpu.step()
     self.cycle += cycles
-    self.settle()               # deliver due commands; cpu.irq = pia.irq()
+    self.settle()  # deliver due commands; cpu.irq = pia.irq()
     return cycles
 ```
 

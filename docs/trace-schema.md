@@ -54,6 +54,7 @@ without reading either trace to the end.
 
 ```python
 from m6800_python import DebugSession, iter_session_steps, write_trace
+
 session = DebugSession(cpu, peek_byte=memory.__getitem__, track_accesses=True)
 with open("run.jsonl", "w") as out:
     write_trace(iter_session_steps(session, max_steps=100_000), out)
