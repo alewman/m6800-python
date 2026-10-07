@@ -226,22 +226,24 @@ which corrected three things the brief for this repository assumed:
 
 ## Oracles, in one paragraph
 
-**There is no hardware-captured corpus for the 6800 family, no
-hardware-corrected test program, no instruction exerciser, and no bus-decoder
-project — none at all, checked 2026-09-12.** SingleStepTests has no 6800
-repository (its `680x0` and `m68000` are the unrelated 16/32-bit MC68000);
-nobody has published a MAME-generated corpus the way `neetandev/m6809` did for
-the 6809; there is no Klaus-Dormann-style functional test and no ZEXALL
-equivalent; `hoglet67`, who built the 6502, 6809 and Z80 bus decoders, has no
-6800 one. The only published measurements of real parts cover a handful of
-**undocumented** opcodes: Gerry Wheeler's six in *BYTE*, December 1977, and Doc
-TB's seven, captured on a Universal Chip Analyzer in 2019. So the **judge here
-is the Motorola manuals** — four bitsavers scans, fetched and SHA-256-pinned by
-`scripts/fetch_reference_docs.py` — and **MAME 0.285 is a detector**, pinned by
-`scripts/fetch_mame_source.py`, turned into a single-step corpus and replayed
-on real code; sim68xx and the n6800 RTL model are two more. Agreement with any
-of them is reported as agreement with that emulator, never as verification
-against silicon.
+**There is no hardware-captured corpus for the 6800 family, no instruction
+exerciser, and no bus-decoder project — none at all, checked 2026-09-12.**
+SingleStepTests has no 6800 repository (its `680x0` and `m68000` are the
+unrelated 16/32-bit MC68000); nobody has published a MAME-generated corpus
+the way `neetandev/m6809` did for the 6809; `hoglet67`, who built the 6502,
+6809 and Z80 bus decoders, has no 6800 one. The only published measurements
+of real parts cover a handful of **undocumented** opcodes: Gerry Wheeler's
+six in *BYTE*, December 1977, and Doc TB's seven, captured on a Universal
+Chip Analyzer in 2019. So the **judge here is the Motorola manuals** — four
+bitsavers scans, fetched and SHA-256-pinned by `scripts/fetch_reference_docs.py`
+— and **MAME 0.285 is a detector**, pinned by `scripts/fetch_mame_source.py`,
+turned into a single-step corpus and replayed on real code; sim68xx and the
+n6800 RTL model are two more. Agreement with any of them is reported as
+agreement with that emulator, never as verification against silicon.
+`validation/functional_test.asm` (added 2026-10-07) is a candidate
+Klaus-Dormann-style functional test — written and checked against the
+manuals, sim68xx and n6800, but not against a real chip, so it is not a
+hardware-corrected oracle yet; see "Hardware owners" below.
 [docs/validation.md](docs/validation.md) has the full inventory, the hashes and
 the seven-rung plan.
 
@@ -263,6 +265,36 @@ need a Python 3.9 environment with amaranth and a C build. Their commands,
 numbers and dates are in
 [the validation record](docs/validation.md#the-record-so-far-2026-09-18);
 treat that, not a badge, as the citation for those rungs.
+
+### Hardware owners: help give this family its first hardware-corrected oracle
+
+If you have a working MEK6800D2, SWTPC 6800, Altair 680, or anything else
+built around a real MC6800, MC6802, MC6808, MC6801 or MC6803, this project
+would like to hear from you. `validation/functional_test.asm` (assembled
+sibling: `functional_test.bin`/`.s19`) runs on the MC6800 and its relatives;
+`validation/functional_test_6801.asm` adds the eleven instructions the
+MC6801/6803 add. Burn or load the `.bin`/`.s19` at an address your board's
+RAM map allows (edit the `ORIGIN` and `SCRATCH` constants at the top of the
+`.asm` and reassemble with `python scripts/asm6800.py` if your low page is
+used for something else), run it from reset, and see where it ends up:
+
+- **Landed in a tight loop with A = `$AA`**: every check this program knows
+  how to make passed. Please say so — which board, which chip (the part
+  number on the ceramic, if you can read it), and that it reached success —
+  even a one-line report is useful, since no one has ever run anything like
+  this on real 6800-family silicon before.
+- **Landed anywhere else**: that address is the evidence. Every failing
+  check has its own address — a tight `BRA` to itself — so the program
+  counter alone says which one, no debugger needed; a few boards' monitor
+  ROMs can just print it. Report the address (and, if you can get it, the
+  value in A) along with the board and chip. This would be the first
+  hardware-measured divergence this family has ever had from the manuals,
+  and it is exactly the kind of result [validation.md](docs/validation.md)
+  is written to receive.
+
+Nobody has checked this family against real silicon before beyond a handful
+of undocumented opcodes (see "Oracles" above); a single report either way
+is new information.
 
 ## Documents
 

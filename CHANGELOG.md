@@ -7,6 +7,27 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- **A self-checking MC6800 functional test**, `validation/functional_test.asm`
+  (and `functional_test_6801.asm` for the eleven MC6801/6803 additions),
+  Klaus-Dormann-style: one case per documented mnemonic (`WAI` excepted --
+  no freestanding ROM can supply its own interrupt), each wrong answer
+  landing on its own trap address, success at `DONE` with A = `$AA`. No
+  system assembler was found, so `scripts/asm6800.py` (a small two-pass
+  MC6800/6801/6803 assembler) and `scripts/gen_functional_test.py` (the
+  generator, deriving every expected value from `tests/test_alu.py`'s and
+  `test_cpx.py`'s independent Boolean formulas and `start-here.md`'s `DAA`
+  table, never from this core's own arithmetic) were written for it. Passes
+  on both parts of the core, on sim68xx, and -- batched, not chained, after
+  chaining turned out to be unreliable in the existing n6800 harness (see
+  `scripts/crosscheck/functional_test_n6800.py`'s docstring and
+  docs/validation.md) -- agrees with n6800 on 949 of 959 instruction
+  boundaries, every difference already explained by n6800's documented
+  `TSX`/`TXS` ±1 quirk. `tests/test_asm6800.py` and `tests/test_functional_test.py`
+  cover the assembler and the generated program. README gained a "Hardware
+  owners" section inviting anyone with real MEK6800D2/SWTPC/Altair 680
+  silicon to run it and report back -- this family's first hardware-corrected
+  oracle, if anyone does.
+
 - **A real MC6803 timer host**, `scripts/m6803_board.py`: TCSR, the
   free-running counter and output compare, computed from the CPU's own
   returned cycles rather than played back, raising `irq2` itself.

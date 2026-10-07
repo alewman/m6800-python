@@ -480,6 +480,104 @@ with `timer` (TCSR decoded, the counter, OC, what `irq2` is armed to) and
 **Tier: emulator-derived**, the same as rungs 3 and 4 -- agreement here is
 agreement with MAME on real code, not with silicon.
 
+## A self-checking MC6800 functional test (stretch item 8)
+
+Every rung above proves instruction semantics by comparison -- against the
+manuals, MAME, sim68xx, n6800 -- but none of them is something an owner of
+real MEK6800D2, SWTPC or Altair 680 hardware could just load and run. That is
+what `validation/functional_test.asm` and `validation/functional_test_6801.asm`
+are for: a single, portable, continuously-executing binary, in the spirit of
+Klaus Dormann's 6502 test. No system assembler was found on this machine
+(`asl`, `vasm6800_std`, `vasm6800_oldstyle`, `a68` -- none on PATH), so
+`scripts/asm6800.py` is a small two-pass assembler written for this, driven by
+`tests/datasheet.py`'s opcode table; `scripts/gen_functional_test.py` generates
+both `.asm` files (and their assembled `.bin`/`.s19` siblings, committed
+alongside the source, following `tests/datasheet.py`'s own precedent of
+committing a generated-but-reviewable artifact).
+
+**Scope, stated plainly.** One case per documented *mnemonic* (118 of them:
+107 shared with the MC6800, 11 the MC6801/6803 add), not every opcode byte x
+addressing-mode combination -- that exhaustiveness is rungs 1 and 2's job
+already. `WAI` is the one documented opcode no freestanding self-test can
+exercise: it halts until an interrupt arrives, and a ROM with no external
+interrupt source has no self-contained way to supply one. A failing check
+lands on its own `FAILnnn` trap (a tight `BRA` to itself), so the program
+counter alone says which one; success reaches `DONE` with A = `$AA`.
+
+**Every expected value is independently derived**, never read back from this
+core: the 8-bit ALU, single-operand, shift and 16-bit formulas come straight
+from `tests/test_alu.py`'s Boolean functions (themselves transcribed from
+M68PRM/M6801RM Appendix A); `CPX`'s two algorithms (the MC6800's two
+byte-compares versus the MC6801/6803's true 16-bit compare) come from
+`tests/test_cpx.py`; `DAA`'s correction uses the nine-row table transcribed
+in [start-here.md](start-here.md#daa-and-the-half-carry). Order matters
+throughout: flags are always checked (via `TPA`) before any value comparison,
+since `CMPA`/`CMPB`/`CPX` overwrite CC with their own comparison flags; where
+the tested op's own result sits in A, it is stashed across that `TPA` with
+`PSHA`/`PULA` (both flags-transparent, `------`), or it would be lost.
+
+**Result, checked 2026-10-07:**
+
+- **The core, both parts**: `functional_test.bin` reaches `DONE` with A =
+  `$AA` on `M6800` and `M6803`; `functional_test_6801.bin` reaches its own
+  `DONE` on `M6803`. `tests/test_functional_test.py` (fast) checks both the
+  source reassembles to the committed binary and every part it claims to
+  support reaches success.
+- **sim68xx**: both files pass under `sim6800`/`sim6301` (loaded as Motorola
+  S19, run to the `DONE` breakpoint). One DAA input had to be chosen
+  carefully: sim68xx's own DAA is independently known (rung 5, above) to
+  break the manual's table on 6 of 1,024 inputs, and this test's first
+  candidate vector (`$09`, H=1, C=0) was one of them -- confirmed by probing
+  sim68xx directly, not assumed. The three DAA cases actually used (`$12`/
+  H=0/C=1, `$8A`/H=0/C=0, `$9A`/H=0/C=0) were checked against a real sim68xx
+  run first and are not on its exception list, while still exercising three
+  different rows of the correction table.
+- **n6800, in batch mode**: `scripts/crosscheck/functional_test_n6800.py`
+  runs the core once, logs the exact bytes read at every instruction
+  boundary the program actually visits, and hands all of them to
+  `n6800_harness.py` as one ordinary multi-case batch -- the same shape of
+  job rung 5 already runs reliably at 197,000 cases. **949 of 959 boundaries
+  agree exactly** on `functional_test.bin` (both parts give the same count,
+  since it runs the identical bytes); every one of the 10 differences is
+  n6800's own already-documented "`TSX`/`TXS` omit the ±1" quirk (this
+  section, rung 5, above), surfaced repeatedly because this program uses
+  `TSX`/`TXS` heavily for stack round-trip checks -- not a new divergence.
+  `functional_test_6801.bin` cannot be meaningfully cross-checked against
+  n6800 at all: n6800 models only the base MC6800 and has no MC6801/6803
+  extended-instruction support (`ABX`, `MUL`, `ADDD`, `SUBD`, `ASLD`,
+  `LSRD`, `LDD`, `STD`, `PSHX`, `PULX`, `BRN`, or `CPX`'s 6801-specific
+  carry), so its batch disagrees on 12 of 134 boundaries for reasons that
+  start the moment a 6801-only opcode is fetched -- a scope limit of n6800
+  itself, not of this test or the core.
+
+**A genuine infrastructure limit, found and not papered over.** The brief for
+this item first suggested literally chaining the program through n6800 one
+instruction at a time, feeding n6800's own output back in as the next
+instruction's input. That turned out not to be reliable:
+`n6800_harness.py` resets the RTL core fresh for every case
+(`reset_state.eq(3)`), which is exactly right for a single subprocess batch of
+independent cases (rung 5's own usage), but re-running the *identical*
+single-case input (one lone `NOP`) six times back to back gave a correct,
+stable result every time, while *chaining* a five-instruction, five-`NOP`
+program -- one subprocess call per instruction, each seeded from the
+previous call's own output -- diverged on roughly one run in three, at a
+different step each time. Nothing but `NOP`s and a five-byte memory image
+rules out this program's size or complexity as the cause. That is a real,
+reproducible limit of the existing single-step harness for this new use
+("chain me through a program"), not a semantic bug in n6800, and the batch
+approach above sidesteps it entirely rather than retrying until a run looks
+clean. `scripts/crosscheck/functional_test_n6800.py`'s own docstring records
+this for whoever next touches the harness.
+
+**Tier: this test program does not, by existing, create a hardware tier.**
+Every expected value above is manual-derived (tier: manual, like rung 0/1),
+just packaged as a single continuously-executing binary instead of a unit
+test; agreement with sim68xx and n6800 is agreement with those emulators,
+exactly as rung 5 already states. It becomes this family's first
+**hardware-corrected** oracle only once an owner of real MEK6800D2, SWTPC or
+Altair 680 hardware actually runs it and reports what A and the final address
+were -- see the README's "Hardware owners" section for how.
+
 ## Scope limits, stated now
 
 - Instruction-level semantics, flags and cycle counts, and interrupt-entry
