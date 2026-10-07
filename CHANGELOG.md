@@ -7,6 +7,17 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- **A real MC6803 timer host**, `scripts/m6803_board.py`: TCSR, the
+  free-running counter and output compare, computed from the CPU's own
+  returned cycles rather than played back, raising `irq2` itself.
+  Replayed against MAME's trace of Escape from the Lost World's pinball
+  MPU: 2,271,980 instructions agree in full, and all 6,241
+  output-compare interrupts are the board's own timer deciding. Input
+  capture and the external IRQ1/NMI lines stay trace-driven (the module
+  docstring says why). `scripts/m6803_debug.py` is the debugger over it.
+  `tests/test_m6803_board.py` (14 fast tests) checks the timer's
+  documented rules directly; `tests/test_replays.py` gained the full
+  replay as a slow test.
 
 - **A reproducible benchmark harness**, `benchmarks/m6800_core_benchmark.py`
   (modelled on z80-python's): four deterministic workloads -- `alu_loop`,

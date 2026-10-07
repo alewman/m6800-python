@@ -199,10 +199,23 @@ capture and output compare, and an SCI — and those generate **four extra
 interrupt vectors** below `$FFF8` ([start-here.md](start-here.md)). Under this
 project's contract those are **host** devices: the core exposes a request per
 vector and the host owns the counter, the registers at `$0000-$001F` and the
-serial shift registers. Irem's M52/M62 sound boards, Knuckle Joe and Double
-Dragon's sub-CPU all lean on the timer, so a 6803 host is materially more work
-than a 6808 one. Knuckle Joe's sound ROM, traced for ten seconds, spends its
-time in the timer interrupt handler.
+serial shift registers. `scripts/m6803_board.py` builds exactly this (TCSR,
+the counter, output compare) for Escape from the Lost World's pinball MPU,
+whose captured trace shows it reading TCSR 7,710 times and taking 6,241
+output-compare interrupts, every one of them now the board's own timer
+deciding, verified against MAME — a 6803 host is materially more work than a
+6808 one, and that script is the worked example.
+
+**Not Knuckle Joe.** An earlier draft of this page said Knuckle Joe's sound
+ROM spends its captured ten seconds in the timer interrupt handler. It does
+not: the trace shows zero accesses anywhere in `$0008-$0014` and zero
+timer-sourced interrupts; its 40,050 taken interrupts are NMI and IRQ, both
+off-chip. The ROM does contain one instruction that reads the counter
+(`$7C4D LDAB $09`), but it never runs in the captured window, and the ROM
+never writes TCSR or the output-compare register anywhere in its 8 KiB, so no
+capture length would show an armed timer interrupt there. Checked directly
+against the ROM and the trace, not assumed; see `scripts/m6803_board.py`'s
+module docstring.
 
 ### Arcade clocks worth knowing
 
