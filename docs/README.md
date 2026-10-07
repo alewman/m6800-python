@@ -30,6 +30,9 @@ Scripts these pages refer to:
 | `scripts/williams_capture.lua`, `scripts/williams_sound.py` | Rung 4: capture Robotron's sound commands and PIA writes from MAME, and run a Williams sound board on the core against them |
 | `scripts/williams_board.py`, `scripts/williams_debug.py` | The Williams sound board (memory map, PIA, command schedule) shared by rung 4 and the debugger; step through it with its PIA working |
 | `scripts/crosscheck/sim68xx.py`, `scripts/crosscheck/n6800.py` | Rung 5: three-way diffs against sim68xx and the n6800 RTL model (cloned into the gitignored `third_party/`) |
+| `scripts/asm6800.py` | A small two-pass MC6800/6801/6803 assembler (no system assembler was found), built for `validation/functional_test.asm` |
+| `scripts/gen_functional_test.py` | Generates `validation/functional_test(_6801).asm` and their assembled `.bin`/`.s19`: one self-checking case per documented mnemonic, independently derived from `tests/test_alu.py`/`test_cpx.py`'s formulas and `start-here.md`'s `DAA` table |
+| `scripts/crosscheck/functional_test_n6800.py` | Checks every instruction boundary the functional test visits against n6800, batched (not chained -- see `validation.md`'s note on why chaining it was unreliable) |
 
 Nothing they fetch is committed: `reference/`, `tests/vectors/`, `*.trace`,
 `error.log`, `mame-work/` and `mame-home/` are all gitignored.
