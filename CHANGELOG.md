@@ -8,6 +8,15 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **A reproducible benchmark harness**, `benchmarks/m6800_core_benchmark.py`
+  (modelled on z80-python's): four deterministic workloads -- `alu_loop`,
+  `indexed_memory`, `stack_calls`, `interrupts` -- with `--instructions`,
+  `--repeats`, `--warmup-instructions`, `--json`, median and per-sample
+  timing, instructions/s and cycles/s. Numbers for CPython 3.14 and PyPy
+  3.11 are recorded in a "Speed" section in README and in
+  docs/validation.md, replacing the ad hoc Williams-board-timing sentence
+  that stood in for them before.
+
 - **The conformance kit**, `m6800_python.conformance` and
   `python -m m6800_python.conformance`: a manifest fixes a run (part,
   undocumented policy, memory, initial state, interrupt events, stop rule), so

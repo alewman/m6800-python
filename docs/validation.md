@@ -393,6 +393,41 @@ A cheaper partial: **shdl6800** is an RTL reimplementation, so if its author
 validated it against silicon, its bus behaviour would be a much better oracle
 than MAME's. Whether he did is **unverified**; ask.
 
+## Speed
+
+Not an oracle rung -- this is not a correctness claim, just a reproducible
+measurement of the pure-Python core's throughput. `benchmarks/m6800_core_benchmark.py`
+(modelled on z80-python's `benchmarks/z80_core_benchmark.py`) runs four
+deterministic workloads for a fixed instruction count, five repeats, and
+reports the median: `alu_loop` (inherent/immediate ALU dispatch and a
+relative branch), `indexed_memory` (`LDAA`/`STAA ,X` with `INX` and `CPX`),
+`stack_calls` (`JSR`/`RTS`, `PSHA`/`PULA`), and `interrupts` (a `WAI` loop
+with the host driving `irq`: one idle boundary observed, then the interrupt
+taken from the wait, `RTI`, `BRA`). `tests/test_benchmark.py` checks each
+workload is deterministic across repeats and actually exercises what its
+name claims (`interrupts` really produces both a wait and an entry;
+`stack_calls`' `SP` returns to where it started).
+
+Measured 2026-10-07 on this machine (CPython 3.14.4 and PyPy 3.11.15, Linux
+x86_64, 32 cores, load average ~5 at the time -- a shared machine, so read
+these as representative, not as isolated-hardware benchmark figures;
+`--instructions 500000 --repeats 5`, the defaults):
+
+| Workload | CPython instr/s | CPython cycles/s | PyPy instr/s | PyPy cycles/s |
+| --- | ---: | ---: | ---: | ---: |
+| `alu_loop` | 4,486,015 | 10,467,362 | 79,919,726 | 186,479,255 |
+| `indexed_memory` | 3,660,172 | 16,104,748 | 54,139,819 | 238,215,096 |
+| `stack_calls` | 4,067,070 | 21,148,766 | 44,948,177 | 233,730,519 |
+| `interrupts` | 2,969,218 | 16,627,622 | 81,790,405 | 458,026,270 |
+
+For scale: z80-python's benchmark (a larger, more heavily dispatched
+instruction set) runs 0.6-1.1 M instructions/s on CPython, per its own
+record; the comparison is informative, not apples-to-apples, since the two
+cores' workloads differ and neither benchmark was designed to be comparable
+to the other. The Williams board's 30 s trace replay (rung 4, a fixed
+program, not a looped workload) takes 4.0 s on CPython 3.14 and 1.9 s on
+PyPy 3.11.
+
 ## Scope limits, stated now
 
 - Instruction-level semantics, flags and cycle counts, and interrupt-entry

@@ -66,5 +66,5 @@ known-first-party = ["m6800_python"]
 testpaths = ["tests"]
 # The trace replays (tests/test_replays.py) take about a minute: run them with -m slow.
 addopts = "--strict-markers -ra -m 'not slow'"
-pythonpath = ["src", "tests"]
+pythonpath = ["src", "tests", "."]
 markers = ["slow: long-running replays of real code against MAME traces (pytest -m slow)"]
