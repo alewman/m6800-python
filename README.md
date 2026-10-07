@@ -128,6 +128,31 @@ wake-up costs, `CPX` on each part, `DAA`'s table, the stack frames — and
 [docs/conformance.md](docs/conformance.md) is the contract, including the point
 that matching the registers while missing `irq_inhibit` is not equivalence.
 
+### Speed
+
+`python benchmarks/m6800_core_benchmark.py` runs four deterministic
+workloads — `alu_loop` (inherent/immediate ALU and a branch, no memory
+access beyond opcode fetch), `indexed_memory` (`LDAA`/`STAA ,X` with `INX`
+and `CPX`), `stack_calls` (`JSR`/`RTS`, `PSHA`/`PULA`, the stack pointer
+returning to where it started each pass) and `interrupts` (a `WAI` loop with
+the host asserting `irq` once an idle boundary has been observed, then
+withdrawing it) — each for 500,000 `step()` calls, 5 repeats, median timed.
+Measured on this machine (load average ~5 of 32 cores; a shared machine, not
+a benchmarking lab, so treat these as representative rather than exact):
+
+| Workload | CPython 3.14.4 | PyPy 3.11.15 |
+| --- | --- | --- |
+| `alu_loop` | 4.5 M instr/s, 10.5 M cycles/s | 80 M instr/s, 186 M cycles/s |
+| `indexed_memory` | 3.7 M instr/s, 16.1 M cycles/s | 54 M instr/s, 238 M cycles/s |
+| `stack_calls` | 4.1 M instr/s, 21.1 M cycles/s | 45 M instr/s, 234 M cycles/s |
+| `interrupts` | 3.0 M instr/s, 16.6 M cycles/s | 82 M instr/s, 458 M cycles/s |
+
+`tests/test_benchmark.py` checks each workload actually exercises what it
+claims (`interrupts` really waits and really takes the IRQ; `stack_calls`'
+`SP` really comes home) and that every workload is reproducible run to run,
+not just fast. `--json FILE` writes the interpreter, platform and every
+sample for a later comparison.
+
 ## Scope
 
 | Part | What differs | Here |
@@ -288,8 +313,10 @@ Said plainly, because the next session needs to know:
 - APPS, the fourth manual, has been searched for interrupt timing (its
   Q&A appendix settled the `WAI` exit and the MC6800's `CLI` rule), not read
   through.
-- Speed: the 30 s Williams board run takes 4.0 s on CPython 3.14 and 1.9 s on
-  PyPy 3.11 (the whole test suite passes on both).
+- The Williams board's 30 s run takes 4.0 s on CPython 3.14 and 1.9 s on
+  PyPy 3.11, for scale against the benchmark numbers in "Speed" above (that
+  run replays a fixed trace rather than looping a workload, so it is not one
+  of the four).
 
 ## License
 
