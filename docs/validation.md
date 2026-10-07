@@ -428,6 +428,58 @@ to the other. The Williams board's 30 s trace replay (rung 4, a fixed
 program, not a looped workload) takes 4.0 s on CPython 3.14 and 1.9 s on
 PyPy 3.11.
 
+## A real 6803 host: the on-chip timer generating its own interrupts
+
+Rungs 3 and 4 both read interrupt entries out of a MAME trace rather than
+deciding them: a real "board" should not need the answer handed to it.
+`scripts/m6803_board.py` builds the one piece that differs between the
+MC6800 and the MC6801/6803 and that this project had not yet given a host --
+TCSR, the free-running counter, and the output-compare register ($08-$0C) --
+and lets the CPU's own `irq2` input be driven by that model instead of by the
+trace, for Escape from the Lost World's Bally pinball MPU (MC6803).
+
+**The target changed from the one first picked, and the trace already
+available said why.** Knuckle Joe's sound ROM does contain one instruction
+that reads the counter, but it never runs in the captured trace, and the ROM
+never writes TCSR or the output-compare register anywhere in its 8 KiB --
+checked by scanning the ROM and the trace directly, not assumed (see
+[timing.md](timing.md) and the module's own docstring). esclwrld's captured
+trace already shows the timer doing real work: TCSR read 7,710 times, the
+output-compare register written 6,243 times, 6,241 output-compare interrupts
+taken. That is the trace used here instead.
+
+**What is modelled, and what is not.** TCSR, the counter and output compare
+are entirely software-driven, so the board computes them, with the exact
+register addresses and the pending-flag "read TCSR, then read the paired
+register" clear sequence taken line-by-line from MAME 0.285's pinned
+`reference/mame0285/m6801.cpp` (cited in the module). Input capture
+($0D/$0E, 783 reads, 390 taken interrupts) depends on a signal external to
+the chip -- most likely an AC zero-crossing detector, common on pinball
+MPUs, but no driver source for this board is pinned to confirm it -- so its
+reads and its interrupt entries are still read from the trace, exactly as
+the external IRQ1 line already is for every game. Overflow (`TOF`) is
+modelled for TCSR's read value, but this ROM never arms `ETOI`, so it is
+never taken as an interrupt, matching the trace's zero `TOF` entries.
+
+**Result**, checked 2026-10-07: all 2,271,980 instructions of the esclwrld
+trace replay with every register, every bus access and the cycle total in
+full agreement with MAME 0.285, and all 6,241 output-compare interrupts are
+the board's own timer deciding, not read from the trace -- `ICF` (390) and
+the external `IRQ` (391) remain trace-driven, by scope, as above. On CPython
+3.14.4 and PyPy 3.11.15. `tests/test_m6803_board.py` (14 tests, fast) checks
+the timer's documented rules directly -- the pending-flag protection, the
+`$FFF8` counter-write quirk (not exercised by esclwrld's own trace, since it
+only reads the counter), overflow across a multi-cycle jump that skips the
+exact match point, OCF-outranks-TOF priority -- each citing the manual page
+or the MAME source line it rests on. `tests/test_replays.py`'s
+`test_m6803_board_matches_mame` (slow) is the full trace replay.
+`scripts/m6803_debug.py` is the `williams_debug.py`-style debugger over it,
+with `timer` (TCSR decoded, the counter, OC, what `irq2` is armed to) and
+`irq2 VECTOR | off` added.
+
+**Tier: emulator-derived**, the same as rungs 3 and 4 -- agreement here is
+agreement with MAME on real code, not with silicon.
+
 ## Scope limits, stated now
 
 - Instruction-level semantics, flags and cycle counts, and interrupt-entry

@@ -26,6 +26,7 @@ Scripts these pages refer to:
 | `scripts/dump_mame_tables.py` | Print MAME's view of the instruction table from the pinned MAME sources, as a detector (its flag column is MAME's comments, not to be trusted) |
 | `scripts/mame_corpus.py`, `scripts/compare_mame_corpus.py` | Rung 2: build MAME 0.285's own 6800 handlers into a single-step corpus generator, and replay the corpus through the core |
 | `scripts/replay_trace.py` | Rung 3: replay watchpoint-logged MAME traces of real arcade code (Drag Race, Knuckle Joe, Kid Niki) |
+| `scripts/m6803_board.py`, `scripts/m6803_debug.py` | esclwrld's MC6803 with a real on-chip timer raising `irq2` itself (not read from the trace), replayed against MAME; step through it in the debugger |
 | `scripts/williams_capture.lua`, `scripts/williams_sound.py` | Rung 4: capture Robotron's sound commands and PIA writes from MAME, and run a Williams sound board on the core against them |
 | `scripts/williams_board.py`, `scripts/williams_debug.py` | The Williams sound board (memory map, PIA, command schedule) shared by rung 4 and the debugger; step through it with its PIA working |
 | `scripts/crosscheck/sim68xx.py`, `scripts/crosscheck/n6800.py` | Rung 5: three-way diffs against sim68xx and the n6800 RTL model (cloned into the gitignored `third_party/`) |

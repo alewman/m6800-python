@@ -153,6 +153,22 @@ claims (`interrupts` really waits and really takes the IRQ; `stack_calls`'
 not just fast. `--json FILE` writes the interpreter, platform and every
 sample for a later comparison.
 
+### A real 6803 host, timer and all
+
+`scripts/m6803_board.py` is a host for Escape from the Lost World's MC6803
+pinball MPU whose on-chip timer (TCSR, the free-running counter,
+output-compare) is real — computed as the CPU reads and writes it, not
+played back from a trace — and raises `irq2` itself. Replayed against
+MAME 0.285's trace of the real ROM: 2,271,980 instructions, every register,
+bus access and cycle total agree, and all 6,241 output-compare interrupts
+are the board's own decision, matching MAME's. Input capture and the
+external IRQ1/NMI lines stay trace-driven; the module's own docstring says
+why, and why Knuckle Joe — the game first picked for this — turned out to
+be the wrong one, checked directly against its ROM and trace rather than
+assumed. `scripts/m6803_debug.py` steps through it, `timer` and `irq2`
+added to the usual commands. [docs/validation.md](docs/validation.md) has
+the full record.
+
 ## Scope
 
 | Part | What differs | Here |

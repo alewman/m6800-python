@@ -16,6 +16,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import m6803_board  # noqa: E402
 import replay_trace  # noqa: E402
 import williams_sound  # noqa: E402
 
@@ -28,6 +29,17 @@ def test_trace_replays_without_divergence(game: str, capsys) -> None:
     if not trace.exists():
         pytest.skip(f"no MAME trace for {game} (python scripts/replay_trace.py {game})")
     assert replay_trace.replay(game, trace) == 0, capsys.readouterr().out
+
+
+def test_m6803_board_matches_mame(capsys) -> None:
+    """esclwrld's on-chip timer, generating its own interrupts (scripts/m6803_board.py)."""
+    trace = ROOT / "mame-work" / m6803_board.GAME / "error.log"
+    if not trace.exists():
+        pytest.skip(
+            f"no MAME trace for {m6803_board.GAME} "
+            f"(python scripts/replay_trace.py {m6803_board.GAME})"
+        )
+    assert m6803_board.replay(trace) == 0, capsys.readouterr().out
 
 
 def test_williams_board_matches_mame(monkeypatch, capsys) -> None:
