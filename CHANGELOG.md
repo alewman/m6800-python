@@ -6,6 +6,13 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-10-07
+
+All eight items of the post-launch polish brief (docs/handoff-polish.md) are
+done, including both stretch items: a real MC6803 timer host raising its own
+interrupts, and a self-checking MC6800 functional test program for real
+hardware.
+
 ### Added
 - **A self-checking MC6800 functional test**, `validation/functional_test.asm`
   (and `functional_test_6801.asm` for the eleven MC6801/6803 additions),

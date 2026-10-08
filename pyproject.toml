@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "m6800-python"
-version = "0.1.0"
+version = "0.2.0"
 description = "Readable, pure-Python Motorola MC6800 and MC6801/6803 instruction-core reference implementation"
 readme = "README.md"
 # The floor is the newest Python PyPy supports (3.11 as of PyPy 7.3.23); raise it when PyPy does.
