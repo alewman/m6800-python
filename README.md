@@ -3,14 +3,19 @@
 [![CI](https://github.com/alewman/m6800-python/actions/workflows/ci.yml/badge.svg)](https://github.com/alewman/m6800-python/actions/workflows/ci.yml)
 [![Oracles](https://github.com/alewman/m6800-python/actions/workflows/oracles.yml/badge.svg)](https://github.com/alewman/m6800-python/actions/workflows/oracles.yml)
 
-**Status (2026-09-18): the core exists and passes all seven rungs of the
-validation ladder** — the Motorola manuals; a generated MAME corpus; 17.6
-million instructions of real arcade and pinball code replayed against MAME; a Williams
-sound board, built on the core, producing MAME's DAC output byte for byte;
-two independent emulators; and the two published measurements of
-undocumented opcodes. It is checked against the manuals, against MAME and
-against other emulators; **nothing here has been verified against silicon,
-because for this family almost nothing can be** (see "Oracles" below).
+**Status (2026-10-07, tagged [`v0.2.0`](https://github.com/alewman/m6800-python/releases/tag/v0.2.0)):
+the core exists and passes all seven rungs of the validation ladder** — the
+Motorola manuals; a generated MAME corpus; 17.6 million instructions of real
+arcade and pinball code replayed against MAME; a Williams sound board, built
+on the core, producing MAME's DAC output byte for byte; two independent
+emulators; and the two published measurements of undocumented opcodes. A
+real MC6803 host (its on-chip timer raising its own interrupts, not played
+back from a trace) and a Klaus-Dormann-style self-checking functional test
+for real hardware are both built on top of it. It is checked against the
+manuals, against MAME and against other emulators; **nothing here has been
+verified against silicon, because for this family almost nothing can be**
+(see "Oracles" below) — though the functional test is a candidate to change
+that, if an owner of real hardware runs it and reports back.
 
 `m6800-python` is a readable, dependency-free instruction core
 for the Motorola **6800 family** — MC6800, MC6802 and MC6808, which share one
