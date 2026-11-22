@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -50,7 +51,10 @@ from m6800_python import M6800, M6803  # noqa: E402
 
 N6800 = ROOT / "third_party" / "n6800"
 PYTHON = ROOT / "third_party" / "n6800-venv" / "bin" / "python"
-HARNESS = ROOT / "scripts" / "crosscheck" / "n6800_harness.py"
+#: The harness imports and subclasses n6800 (GPL-3.0), so it is a GPL tool kept outside this
+#: repository (docs/provenance.md): M6800_GPL_TOOLS names its directory.
+GPL_TOOLS = Path(os.environ.get("M6800_GPL_TOOLS", ROOT / "scripts" / "crosscheck"))
+HARNESS = GPL_TOOLS / "n6800_harness.py"
 
 PARTS = {"6800": M6800, "6803": M6803}
 

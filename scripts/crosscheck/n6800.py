@@ -8,7 +8,9 @@ handoff brief) is a partial SpinalHDL port of.  Neither was validated against
 silicon: both are checked by their authors' own formal properties, and their
 bus cycles were written from Motorola's cycle-by-cycle tables (MCSDD Table 8),
 so on timing they are a second reading of the datasheet, not a measurement.
-Running n6800 needs Python 3.9 and amaranth 0.3; none of it is committed:
+Running n6800 needs Python 3.9 and amaranth 0.3, and the single-step harness
+``n6800_harness.py``, a GPL tool kept outside this repository (``M6800_GPL_TOOLS``
+names its directory; docs/provenance.md); none of it is committed:
 
     git clone https://github.com/RobertBaruch/n6800 third_party/n6800
     git -C third_party/n6800 checkout f117162866c14dff0d0f23e22f48fdd5f9ace923
@@ -30,6 +32,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from collections import Counter, defaultdict
@@ -45,7 +48,10 @@ from m6800_python import M6800  # noqa: E402
 
 N6800 = ROOT / "third_party" / "n6800"
 PYTHON = ROOT / "third_party" / "n6800-venv" / "bin" / "python"
-HARNESS = ROOT / "scripts" / "crosscheck" / "n6800_harness.py"
+#: The harness imports and subclasses n6800 (GPL-3.0), so it is a GPL tool kept outside this
+#: repository (docs/provenance.md): M6800_GPL_TOOLS names its directory.
+GPL_TOOLS = Path(os.environ.get("M6800_GPL_TOOLS", ROOT / "scripts" / "crosscheck"))
+HARNESS = GPL_TOOLS / "n6800_harness.py"
 VECTORS = ROOT / "tests" / "vectors" / "m6800"
 
 

@@ -11,9 +11,11 @@ third_party/ with
     git -C third_party/sim68xx checkout d49c99a61e6437d84ec313b91511db23e02efb54
     make -C third_party/sim68xx/src CFLAGS='-O2 -std=gnu89 -w'
 
-and this script links scripts/crosscheck/sim68xx_harness.c against its MC6800
-objects.  Only the MC6800 is compared: sim68xx's 6801-family targets are the
-Hitachi HD6301/HD6303, whose cycle counts are Hitachi's.
+and this script links sim68xx_harness.c against its MC6800 objects.  The harness,
+linked with sim68xx, is a GPL tool and is kept outside this repository;
+``M6800_GPL_TOOLS`` names its directory (docs/provenance.md).  Only the MC6800 is
+compared: sim68xx's 6801-family targets are the Hitachi HD6301/HD6303, whose cycle
+counts are Hitachi's.
 
 Every documented-opcode case of tests/vectors/m6800 (the MAME corpus) is run
 through all three from the same initial state; registers and the final memory
@@ -30,6 +32,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from collections import Counter, defaultdict
@@ -45,6 +48,10 @@ from m6800_python import M6800  # noqa: E402
 
 SIM = ROOT / "third_party" / "sim68xx"
 HARNESS = ROOT / "third_party" / "sim68xx-harness"
+#: The C harness is a GPL tool kept outside this repository (docs/provenance.md):
+#: M6800_GPL_TOOLS names its directory.
+GPL_TOOLS = Path(os.environ.get("M6800_GPL_TOOLS", ROOT / "scripts" / "crosscheck"))
+HARNESS_C = GPL_TOOLS / "sim68xx_harness.c"
 VECTORS = ROOT / "tests" / "vectors" / "m6800"
 FIELDS = ("pc", "s", "x", "a", "b", "cc", "cycles")
 COMPARED = ("pc", "s", "x", "a", "b", "cc", "ram")  # not cycles: see the docstring
@@ -71,7 +78,7 @@ def build_harness() -> None:
             "-I../inc/base",
             "-o",
             str(HARNESS),
-            str(ROOT / "scripts" / "crosscheck" / "sim68xx_harness.c"),
+            str(HARNESS_C),
             *objects,
         ],
         cwd=src,
