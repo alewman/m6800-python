@@ -12,9 +12,9 @@ third_party/ with
     make -C third_party/sim68xx/src CFLAGS='-O2 -std=gnu89 -w'
 
 and this script links sim68xx_harness.c against its MC6800 objects.  The harness,
-linked with sim68xx, is a GPL tool and is kept outside this repository;
-``M6800_GPL_TOOLS`` names its directory (docs/provenance.md).  Only the MC6800 is
-compared: sim68xx's 6801-family targets are the Hitachi HD6301/HD6303, whose cycle
+linked with sim68xx, is a GPL tool and is kept outside this repository; it is found
+at ``$EMU_TOOLS_GPL2/tools/sim68xx/sim68xx_harness.c`` (docs/provenance.md).  Only the
+MC6800 is compared: sim68xx's 6801-family targets are the Hitachi HD6301/HD6303, whose cycle
 counts are Hitachi's.
 
 Every documented-opcode case of tests/vectors/m6800 (the MAME corpus) is run
@@ -48,10 +48,12 @@ from m6800_python import M6800  # noqa: E402
 
 SIM = ROOT / "third_party" / "sim68xx"
 HARNESS = ROOT / "third_party" / "sim68xx-harness"
-#: The C harness is a GPL tool kept outside this repository (docs/provenance.md):
-#: M6800_GPL_TOOLS names its directory.
-GPL_TOOLS = Path(os.environ.get("M6800_GPL_TOOLS", ROOT / "scripts" / "crosscheck"))
-HARNESS_C = GPL_TOOLS / "sim68xx_harness.c"
+#: The C harness is a GPL tool kept outside this repository (docs/provenance.md). The
+#: sim68xx files it links are GPL-2.0-only, so it lives in emu-tools-gpl2, at its fixed
+#: path under EMU_TOOLS_GPL2 (one variable per tool repository, emu-tools
+#: docs/contract.md section 5).
+HARNESS_PATH = "tools/sim68xx/sim68xx_harness.c"
+HARNESS_C = Path(os.environ.get("EMU_TOOLS_GPL2") or ".") / HARNESS_PATH
 VECTORS = ROOT / "tests" / "vectors" / "m6800"
 FIELDS = ("pc", "s", "x", "a", "b", "cc", "cycles")
 COMPARED = ("pc", "s", "x", "a", "b", "cc", "ram")  # not cycles: see the docstring
@@ -61,6 +63,13 @@ def build_harness() -> None:
     src = SIM / "src"
     if not (src / "arch" / "m6800" / "opfunc.o").exists():
         sys.exit(f"{SIM} is not built; see this script's docstring")
+    if not os.environ.get("EMU_TOOLS_GPL2") or not HARNESS_C.exists():
+        print(
+            "sim68xx_harness.c is a GPL-2.0-only tool kept outside this repository: set "
+            f"EMU_TOOLS_GPL2 (expects $EMU_TOOLS_GPL2/{HARNESS_PATH})",
+            file=sys.stderr,
+        )
+        sys.exit(3)
     names = "callstac command cpu io fileio memory reg opfunc optab instr ireg sci"
     objects = [f"arch/m6800/{name}.o" for name in names.split()]
     objects += [f"base/{name}.o" for name in ("error", "fprinthe", "symtab", "tty")]

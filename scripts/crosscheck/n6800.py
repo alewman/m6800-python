@@ -9,8 +9,9 @@ silicon: both are checked by their authors' own formal properties, and their
 bus cycles were written from Motorola's cycle-by-cycle tables (MCSDD Table 8),
 so on timing they are a second reading of the datasheet, not a measurement.
 Running n6800 needs Python 3.9 and amaranth 0.3, and the single-step harness
-``n6800_harness.py``, a GPL tool kept outside this repository (``M6800_GPL_TOOLS``
-names its directory; docs/provenance.md); none of it is committed:
+``n6800_harness.py``, a GPL tool kept outside this repository (at
+``$EMU_TOOLS_GPL/tools/m6800-python/n6800_harness.py``; docs/provenance.md); none of it
+is committed:
 
     git clone https://github.com/RobertBaruch/n6800 third_party/n6800
     git -C third_party/n6800 checkout f117162866c14dff0d0f23e22f48fdd5f9ace923
@@ -49,9 +50,23 @@ from m6800_python import M6800  # noqa: E402
 N6800 = ROOT / "third_party" / "n6800"
 PYTHON = ROOT / "third_party" / "n6800-venv" / "bin" / "python"
 #: The harness imports and subclasses n6800 (GPL-3.0), so it is a GPL tool kept outside this
-#: repository (docs/provenance.md): M6800_GPL_TOOLS names its directory.
-GPL_TOOLS = Path(os.environ.get("M6800_GPL_TOOLS", ROOT / "scripts" / "crosscheck"))
-HARNESS = GPL_TOOLS / "n6800_harness.py"
+#: repository (docs/provenance.md), at its fixed path under EMU_TOOLS_GPL (one variable per
+#: tool repository, emu-tools docs/contract.md section 5).
+HARNESS_PATH = "tools/m6800-python/n6800_harness.py"
+HARNESS = Path(os.environ.get("EMU_TOOLS_GPL") or ".") / HARNESS_PATH
+
+
+def require_harness() -> None:
+    """Exit with status 3 (a missing input) unless EMU_TOOLS_GPL holds the harness."""
+    if not os.environ.get("EMU_TOOLS_GPL") or not HARNESS.exists():
+        print(
+            "n6800_harness.py is a GPL tool kept outside this repository: set EMU_TOOLS_GPL "
+            f"(expects $EMU_TOOLS_GPL/{HARNESS_PATH})",
+            file=sys.stderr,
+        )
+        sys.exit(3)
+
+
 VECTORS = ROOT / "tests" / "vectors" / "m6800"
 
 
@@ -185,6 +200,7 @@ def main() -> None:
     for needed in (VECTORS, N6800, PYTHON):
         if not needed.exists():
             sys.exit(f"{needed} missing; see this script's docstring")
+    require_harness()
     sys.exit(compare(args.limit, args.show))
 
 

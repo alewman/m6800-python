@@ -52,9 +52,10 @@ from m6800_python import M6800, M6803  # noqa: E402
 N6800 = ROOT / "third_party" / "n6800"
 PYTHON = ROOT / "third_party" / "n6800-venv" / "bin" / "python"
 #: The harness imports and subclasses n6800 (GPL-3.0), so it is a GPL tool kept outside this
-#: repository (docs/provenance.md): M6800_GPL_TOOLS names its directory.
-GPL_TOOLS = Path(os.environ.get("M6800_GPL_TOOLS", ROOT / "scripts" / "crosscheck"))
-HARNESS = GPL_TOOLS / "n6800_harness.py"
+#: repository (docs/provenance.md), at its fixed path under EMU_TOOLS_GPL (one variable per
+#: tool repository, emu-tools docs/contract.md section 5).
+HARNESS_PATH = "tools/m6800-python/n6800_harness.py"
+HARNESS = Path(os.environ.get("EMU_TOOLS_GPL") or ".") / HARNESS_PATH
 
 PARTS = {"6800": M6800, "6803": M6803}
 
@@ -140,6 +141,13 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--part", default="6800", choices=sorted(PARTS))
     parser.add_argument("--max-steps", type=int, default=2000)
     args = parser.parse_args(argv)
+    if not os.environ.get("EMU_TOOLS_GPL") or not HARNESS.exists():
+        print(
+            "n6800_harness.py is a GPL tool kept outside this repository: set EMU_TOOLS_GPL "
+            f"(expects $EMU_TOOLS_GPL/{HARNESS_PATH})",
+            file=sys.stderr,
+        )
+        sys.exit(3)
 
     cases, afters, by_address, success_pc = trace(args.name, args.part, args.max_steps)
     final_pc = afters[-1]["pc"] if afters else None

@@ -335,8 +335,8 @@ python scripts/williams_sound.py           # rung 4: the Robotron sound board ag
 python scripts/williams_debug.py           # the same board, in the debugger
 python scripts/crosscheck/sim68xx.py       # rung 5: three-way diff with sim68xx
 python scripts/crosscheck/n6800.py         # rung 5: against the n6800 RTL model
-# (both need M6800_GPL_TOOLS: their single-step harnesses are GPL tools kept outside this
-#  repository, docs/provenance.md)
+# (sim68xx.py needs EMU_TOOLS_GPL2, n6800.py EMU_TOOLS_GPL: their single-step harnesses
+#  are GPL tools kept outside this repository, docs/provenance.md)
 scripts/mame_trace.sh dragrace 2 :maincpu  # a raw MAME trace; see docs/mame-oracle.md
 python scripts/smoke_installed_package.py  # the installed wheel's public API, run by CI
 ```
